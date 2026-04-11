@@ -1,0 +1,16 @@
+{
+  "id": "planeswalker",
+  "name": "Planeswalker",
+  "tcgTheme": "planeswalker",
+  "artFlex": 3.28,
+  "frameColor": "#1a1512",
+  "accentColor": "#c4a574",
+  "artMatColor": "#060605",
+  "innerPadding": 13,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 14,
+  "rarityGemSize": 26
+}

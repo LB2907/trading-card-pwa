@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: Trading Card Studio — Marketplace API (Phase B stub)
+  version: 0.0.0
+  description: >
+    Not implemented in Phase A. Use as a contract sketch for a self-hosted backend.
+servers:
+  - url: https://api.example.com
+paths:
+  /v1/listings:
+    get:
+      summary: List open listings
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create listing
+      responses:
+        "201":
+          description: Created
+  /v1/offers:
+    post:
+      summary: Place offer / trade intent
+      responses:
+        "201":
+          description: Created

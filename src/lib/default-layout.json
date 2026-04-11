@@ -1,0 +1,16 @@
+{
+  "id": "skirmish",
+  "name": "Skirmish",
+  "tcgTheme": "skirmish",
+  "artFlex": 3.22,
+  "frameColor": "#3d2818",
+  "accentColor": "#c9a227",
+  "artMatColor": "#0f0e0a",
+  "innerPadding": 14,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 16,
+  "rarityGemSize": 26
+}

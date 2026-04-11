@@ -1,0 +1,16 @@
+{
+  "id": "trainer",
+  "name": "Trainer",
+  "tcgTheme": "trainer",
+  "artFlex": 3.65,
+  "frameColor": "#b8891f",
+  "accentColor": "#fff3c4",
+  "artMatColor": "#9eb6d4",
+  "innerPadding": 16,
+  "nameFontSize": 20,
+  "typeFontSize": 14,
+  "bodyFontSize": 13,
+  "flavorFontSize": 12,
+  "statFontSize": 14,
+  "rarityGemSize": 25
+}

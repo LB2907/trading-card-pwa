@@ -1,0 +1,16 @@
+{
+  "id": "duelist",
+  "name": "Duelist",
+  "tcgTheme": "duelist",
+  "artFlex": 3.18,
+  "frameColor": "#2a1838",
+  "accentColor": "#9b7ebd",
+  "artMatColor": "#0a0610",
+  "innerPadding": 12,
+  "nameFontSize": 20,
+  "typeFontSize": 14,
+  "bodyFontSize": 13,
+  "flavorFontSize": 12,
+  "statFontSize": 14,
+  "rarityGemSize": 24
+}
