@@ -1,5 +1,12 @@
 import type { CardLayoutJson } from "@/lib/card-layout";
 import { type RarityVisual, rarityVisual } from "@/lib/card-visual";
+import { paintAutumnBackdropMotifs } from "@/lib/compositor/autumn-motifs";
+import { paintCelestialBackdropMotifs } from "@/lib/compositor/celestial-motifs";
+import { paintCelestialClockBackdropMotifs } from "@/lib/compositor/celestial-clock-motifs";
+import { paintFloralBackdropMotifs } from "@/lib/compositor/floral-motifs";
+import { paintMonolineInkBackdropMotifs } from "@/lib/compositor/monoline-ink-motifs";
+import { paintNeonCityBackdropMotifs } from "@/lib/compositor/neon-city-motifs";
+import { paintTideBackdropMotifs } from "@/lib/compositor/tide-motifs";
 import {
   canvasFontSans,
   canvasFontSansItalic,
@@ -156,6 +163,7 @@ export function paintThemedBackdrop(
   artW: number,
 ): void {
   const frame = parseHex(layout.frameColor, "#111015");
+  const accent = parseHex(layout.accentColor, "#c9a962");
 
   switch (theme) {
     case "trainer": {
@@ -223,6 +231,192 @@ export function paintThemedBackdrop(
       vign.addColorStop(1, "rgba(0,0,0,0.45)");
       ctx.fillStyle = vign;
       ctx.fillRect(0, 0, width, h);
+      break;
+    }
+    case "floral": {
+      const g = ctx.createLinearGradient(0, 0, width * 0.92, h * 1.02);
+      g.addColorStop(0, "#1a1016");
+      g.addColorStop(0.22, "#26141c");
+      g.addColorStop(0.48, frame);
+      g.addColorStop(0.76, "#120a0e");
+      g.addColorStop(1, "#080406");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const leaf = ctx.createLinearGradient(0, h * 0.5, width * 0.45, h);
+      leaf.addColorStop(0, "rgba(0,0,0,0)");
+      leaf.addColorStop(0.55, "rgba(48,72,52,0.28)");
+      leaf.addColorStop(1, "rgba(24,40,30,0.42)");
+      ctx.fillStyle = leaf;
+      ctx.fillRect(0, 0, width, h);
+      const bloom = ctx.createRadialGradient(
+        width * 0.88,
+        h * 0.12,
+        0,
+        width * 0.72,
+        h * 0.22,
+        width * 0.55,
+      );
+      bloom.addColorStop(0, "rgba(252,210,228,0.2)");
+      bloom.addColorStop(0.4, "rgba(180,110,140,0.09)");
+      bloom.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = bloom;
+      ctx.fillRect(0, 0, width, h);
+      const mist = ctx.createLinearGradient(0, 0, width * 0.35, h * 0.55);
+      mist.addColorStop(0, "rgba(200,230,210,0.08)");
+      mist.addColorStop(0.55, "rgba(0,0,0,0)");
+      mist.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = mist;
+      ctx.fillRect(0, 0, width, h);
+      paintFloralBackdropMotifs(ctx, width, h, artTop, artH);
+      break;
+    }
+    case "celestial": {
+      const g = ctx.createLinearGradient(0, 0, width, h * 1.05);
+      g.addColorStop(0, "#0a0e1a");
+      g.addColorStop(0.35, frame);
+      g.addColorStop(0.7, "#060812");
+      g.addColorStop(1, "#03050a");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const neb = ctx.createRadialGradient(
+        width * 0.2,
+        h * 0.35,
+        0,
+        width * 0.35,
+        h * 0.45,
+        width * 0.55,
+      );
+      neb.addColorStop(0, "rgba(100,80,180,0.18)");
+      neb.addColorStop(0.4, "rgba(40,60,140,0.08)");
+      neb.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = neb;
+      ctx.fillRect(0, 0, width, h);
+      const neb2 = ctx.createRadialGradient(
+        width * 0.85,
+        h * 0.55,
+        0,
+        width * 0.72,
+        h * 0.42,
+        width * 0.45,
+      );
+      neb2.addColorStop(0, "rgba(60,120,200,0.12)");
+      neb2.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = neb2;
+      ctx.fillRect(0, 0, width, h);
+      paintCelestialBackdropMotifs(ctx, width, h, artTop, artH);
+      break;
+    }
+    case "autumn": {
+      const g = ctx.createLinearGradient(0, 0, width * 0.9, h);
+      g.addColorStop(0, "#1c0e08");
+      g.addColorStop(0.28, "#2a140c");
+      g.addColorStop(0.5, frame);
+      g.addColorStop(0.75, "#140a06");
+      g.addColorStop(1, "#080402");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const glow = ctx.createRadialGradient(
+        width * 0.25,
+        h * 0.75,
+        0,
+        width * 0.35,
+        h * 0.82,
+        width * 0.5,
+      );
+      glow.addColorStop(0, "rgba(220,120,40,0.15)");
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, h);
+      const rust = ctx.createLinearGradient(width, 0, 0, h * 0.6);
+      rust.addColorStop(0, "rgba(180,60,30,0.1)");
+      rust.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = rust;
+      ctx.fillRect(0, 0, width, h);
+      paintAutumnBackdropMotifs(ctx, width, h, artTop, artH);
+      break;
+    }
+    case "tide": {
+      const g = ctx.createLinearGradient(0, 0, width * 0.5, h * 1.02);
+      g.addColorStop(0, "#061218");
+      g.addColorStop(0.4, frame);
+      g.addColorStop(0.75, "#040c12");
+      g.addColorStop(1, "#020608");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const caustic = ctx.createLinearGradient(0, h * 0.4, width, h);
+      caustic.addColorStop(0, "rgba(0,0,0,0)");
+      caustic.addColorStop(0.5, "rgba(80,200,220,0.1)");
+      caustic.addColorStop(1, "rgba(40,120,140,0.14)");
+      ctx.fillStyle = caustic;
+      ctx.fillRect(0, 0, width, h);
+      const surface = ctx.createLinearGradient(0, h * 0.65, width * 0.8, h);
+      surface.addColorStop(0, "rgba(0,0,0,0)");
+      surface.addColorStop(1, "rgba(30,90,110,0.22)");
+      ctx.fillStyle = surface;
+      ctx.fillRect(0, 0, width, h);
+      paintTideBackdropMotifs(ctx, width, h, artTop, artH);
+      break;
+    }
+    case "celestial_clock": {
+      const g = ctx.createLinearGradient(0, 0, width * 0.85, h);
+      g.addColorStop(0, "#0e0a12");
+      g.addColorStop(0.35, frame);
+      g.addColorStop(0.72, "#08060c");
+      g.addColorStop(1, "#030205");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const halo = ctx.createRadialGradient(
+        width * 0.5,
+        h * 0.72,
+        0,
+        width * 0.5,
+        h * 0.78,
+        width * 0.55,
+      );
+      halo.addColorStop(0, "rgba(180,140,80,0.12)");
+      halo.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, width, h);
+      paintCelestialClockBackdropMotifs(ctx, width, h, artTop, artH);
+      break;
+    }
+    case "neon_city": {
+      const g = ctx.createLinearGradient(0, 0, width, h * 1.02);
+      g.addColorStop(0, "#050810");
+      g.addColorStop(0.45, frame);
+      g.addColorStop(0.82, "#03060c");
+      g.addColorStop(1, "#020308");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const mist = ctx.createRadialGradient(
+        width * 0.35,
+        h * 0.88,
+        0,
+        width * 0.5,
+        h * 0.95,
+        width * 0.75,
+      );
+      mist.addColorStop(0, "rgba(40,90,95,0.12)");
+      mist.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = mist;
+      ctx.fillRect(0, 0, width, h);
+      paintNeonCityBackdropMotifs(ctx, width, h, artTop, artH, accent);
+      break;
+    }
+    case "monoline_ink": {
+      const g = ctx.createLinearGradient(0, 0, width, h * 1.05);
+      g.addColorStop(0, "#12100e");
+      g.addColorStop(0.42, frame);
+      g.addColorStop(0.78, "#0c0a08");
+      g.addColorStop(1, "#060504");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const paper = ctx.createLinearGradient(0, h * 0.55, width * 0.6, h);
+      paper.addColorStop(0, "rgba(0,0,0,0)");
+      paper.addColorStop(1, "rgba(55,48,40,0.18)");
+      ctx.fillStyle = paper;
+      ctx.fillRect(0, 0, width, h);
+      paintMonolineInkBackdropMotifs(ctx, width, h, artTop, artH, accent);
       break;
     }
     default: {
@@ -304,8 +498,37 @@ export function paintThemedOuterBorder(
   ctx.beginPath();
   pathRoundRect(ctx, 0, 0, width, h, outerR);
   ctx.strokeStyle =
-    theme === "trainer" ? "rgba(255,236,170,0.62)" : "rgba(255,255,255,0.14)";
-  ctx.lineWidth = theme === "trainer" ? 2.25 : 1.25;
+    theme === "trainer"
+      ? "rgba(255,236,170,0.62)"
+      : theme === "floral"
+        ? "rgba(255,232,242,0.22)"
+        : theme === "celestial"
+          ? "rgba(210,230,255,0.28)"
+          : theme === "autumn"
+            ? "rgba(255,215,170,0.26)"
+            : theme === "tide"
+              ? "rgba(170,240,252,0.28)"
+              : theme === "celestial_clock"
+                ? "rgba(215,185,120,0.3)"
+                : theme === "neon_city"
+                  ? "rgba(120,220,210,0.28)"
+                  : theme === "monoline_ink"
+                    ? "rgba(220,210,200,0.24)"
+                    : "rgba(255,255,255,0.14)";
+  ctx.lineWidth =
+    theme === "trainer"
+      ? 2.25
+      : theme === "floral"
+        ? 1.4
+        : theme === "celestial" || theme === "autumn"
+          ? 1.35
+          : theme === "tide"
+            ? 1.3
+            : theme === "celestial_clock" || theme === "monoline_ink"
+              ? 1.28
+              : theme === "neon_city"
+                ? 1.15
+                : 1.25;
   ctx.stroke();
 
   ctx.beginPath();
@@ -314,6 +537,34 @@ export function paintThemedOuterBorder(
     ctx.strokeStyle = accent;
     ctx.globalAlpha = 0.5;
     ctx.lineWidth = 1.35;
+  } else if (theme === "floral") {
+    ctx.strokeStyle = "rgba(236,182,206,0.48)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.25;
+  } else if (theme === "celestial") {
+    ctx.strokeStyle = "rgba(150,195,255,0.48)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.2;
+  } else if (theme === "autumn") {
+    ctx.strokeStyle = "rgba(230,150,80,0.45)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.2;
+  } else if (theme === "tide") {
+    ctx.strokeStyle = "rgba(120,210,225,0.46)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.15;
+  } else if (theme === "celestial_clock") {
+    ctx.strokeStyle = "rgba(200,170,110,0.42)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.15;
+  } else if (theme === "neon_city") {
+    ctx.strokeStyle = "rgba(78,200,195,0.42)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.1;
+  } else if (theme === "monoline_ink") {
+    ctx.strokeStyle = "rgba(210,200,190,0.4)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.05;
   } else if (theme === "duelist") {
     ctx.strokeStyle = "rgba(210,195,255,0.42)";
     ctx.globalAlpha = 1;
@@ -368,6 +619,34 @@ export function paintThemedArtBezel(
     ctx.strokeStyle = accent;
     ctx.globalAlpha = 0.55;
     ctx.lineWidth = 1.65;
+  } else if (theme === "floral") {
+    ctx.strokeStyle = "rgba(228,168,196,0.52)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.5;
+  } else if (theme === "celestial") {
+    ctx.strokeStyle = "rgba(160,200,255,0.5)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.45;
+  } else if (theme === "autumn") {
+    ctx.strokeStyle = "rgba(220,150,70,0.48)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.45;
+  } else if (theme === "tide") {
+    ctx.strokeStyle = "rgba(100,200,215,0.5)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.35;
+  } else if (theme === "celestial_clock") {
+    ctx.strokeStyle = "rgba(200,175,120,0.48)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.35;
+  } else if (theme === "neon_city") {
+    ctx.strokeStyle = "rgba(90,210,200,0.48)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.25;
+  } else if (theme === "monoline_ink") {
+    ctx.strokeStyle = "rgba(215,205,195,0.48)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.2;
   } else if (theme === "trainer") {
     ctx.strokeStyle = "rgba(255,255,255,0.5)";
     ctx.globalAlpha = 0.95;
@@ -401,10 +680,34 @@ export function paintThemedArtBezel(
   ctx.stroke();
   ctx.restore();
 
-  if (theme === "planeswalker") {
+  if (
+    theme === "planeswalker" ||
+    theme === "floral" ||
+    theme === "celestial" ||
+    theme === "autumn" ||
+    theme === "tide" ||
+    theme === "celestial_clock" ||
+    theme === "neon_city" ||
+    theme === "monoline_ink"
+  ) {
     ctx.beginPath();
     pathRoundRect(ctx, pad + 2.5, artTop + 2.5, artW - 5, artH - 5, Math.max(2, innerR - 2));
-    ctx.strokeStyle = "rgba(0,0,0,0.38)";
+    ctx.strokeStyle =
+      theme === "floral"
+        ? "rgba(32,18,26,0.42)"
+        : theme === "celestial"
+          ? "rgba(20,35,55,0.4)"
+          : theme === "autumn"
+            ? "rgba(40,20,10,0.42)"
+            : theme === "tide"
+              ? "rgba(10,40,48,0.42)"
+              : theme === "celestial_clock"
+                ? "rgba(30,22,18,0.4)"
+                : theme === "neon_city"
+                  ? "rgba(8,28,32,0.42)"
+                  : theme === "monoline_ink"
+                    ? "rgba(24,20,16,0.38)"
+                    : "rgba(0,0,0,0.38)";
     ctx.lineWidth = 1;
     ctx.stroke();
   }
@@ -440,6 +743,27 @@ export function nameplateStyle(
 ): { showBar: boolean; barColor: string } {
   if (theme === "planeswalker") {
     return { showBar: true, barColor: "rgba(0,0,0,0.45)" };
+  }
+  if (theme === "floral") {
+    return { showBar: true, barColor: "rgba(42,24,34,0.62)" };
+  }
+  if (theme === "celestial") {
+    return { showBar: true, barColor: "rgba(18,28,52,0.62)" };
+  }
+  if (theme === "autumn") {
+    return { showBar: true, barColor: "rgba(48,26,14,0.62)" };
+  }
+  if (theme === "tide") {
+    return { showBar: true, barColor: "rgba(12,36,48,0.62)" };
+  }
+  if (theme === "celestial_clock") {
+    return { showBar: true, barColor: "rgba(28,22,38,0.65)" };
+  }
+  if (theme === "neon_city") {
+    return { showBar: true, barColor: "rgba(8,18,28,0.68)" };
+  }
+  if (theme === "monoline_ink") {
+    return { showBar: true, barColor: "rgba(28,24,20,0.58)" };
   }
   if (theme === "trainer") {
     return { showBar: true, barColor: "rgba(30,55,90,0.55)" };
@@ -493,6 +817,62 @@ export function abilityPanelStyle(theme: TcgTheme): {
         fillBottom: "rgba(3,1,8,0.96)",
         stroke: "rgba(175,155,220,0.42)",
         innerHighlight: "rgba(200,180,255,0.1)",
+      };
+    case "floral":
+      return {
+        fill: "rgba(16,8,12,0.9)",
+        fillTop: "rgba(52,32,44,0.58)",
+        fillBottom: "rgba(6,2,5,0.94)",
+        stroke: "rgba(214,165,188,0.38)",
+        innerHighlight: "rgba(255,228,240,0.11)",
+      };
+    case "celestial":
+      return {
+        fill: "rgba(8,12,24,0.9)",
+        fillTop: "rgba(28,40,72,0.55)",
+        fillBottom: "rgba(4,6,14,0.94)",
+        stroke: "rgba(150,190,255,0.35)",
+        innerHighlight: "rgba(220,235,255,0.1)",
+      };
+    case "autumn":
+      return {
+        fill: "rgba(24,12,6,0.9)",
+        fillTop: "rgba(72,38,18,0.55)",
+        fillBottom: "rgba(12,5,2,0.94)",
+        stroke: "rgba(220,150,80,0.36)",
+        innerHighlight: "rgba(255,210,160,0.1)",
+      };
+    case "tide":
+      return {
+        fill: "rgba(6,16,22,0.9)",
+        fillTop: "rgba(22,58,72,0.55)",
+        fillBottom: "rgba(2,8,12,0.94)",
+        stroke: "rgba(100,200,215,0.34)",
+        innerHighlight: "rgba(200,245,255,0.1)",
+      };
+    case "celestial_clock":
+      return {
+        fill: "rgba(14,10,18,0.9)",
+        fillTop: "rgba(48,38,28,0.52)",
+        fillBottom: "rgba(6,4,8,0.94)",
+        stroke: "rgba(200,170,110,0.34)",
+        innerHighlight: "rgba(255,230,190,0.09)",
+      };
+    case "neon_city":
+      return {
+        fill: "rgba(6,10,18,0.92)",
+        fillTop: "rgba(18,48,52,0.5)",
+        fillBottom: "rgba(2,4,10,0.96)",
+        stroke: "rgba(78,200,195,0.28)",
+        innerHighlight: "rgba(200,245,240,0.07)",
+      };
+    case "monoline_ink":
+      return {
+        fill: "rgba(18,15,12,0.88)",
+        fillTop: "rgba(42,36,30,0.48)",
+        fillBottom: "rgba(8,6,5,0.92)",
+        stroke: "rgba(200,190,180,0.3)",
+        innerHighlight: "rgba(235,228,218,0.08)",
       };
     default:
       return {
@@ -571,7 +951,20 @@ export function drawNameplateBar(
 ): void {
   const { showBar, barColor } = nameplateStyle(theme);
   if (!showBar) return;
-  const r = theme === "duelist" ? 4 : 7;
+  const r =
+    theme === "duelist"
+      ? 4
+      : theme === "floral" || theme === "autumn"
+        ? 8
+        : theme === "tide"
+          ? 6
+          : theme === "neon_city"
+            ? 5
+            : theme === "celestial_clock"
+              ? 6
+              : theme === "monoline_ink"
+                ? 9
+                : 7;
   ctx.save();
   ctx.beginPath();
   pathRoundRect(ctx, x, y, w, h, r);
@@ -595,6 +988,34 @@ export function drawNameplateBar(
     ctx.strokeStyle = "rgba(160,140,200,0.35)";
     ctx.lineWidth = 0.75;
     ctx.stroke();
+  } else if (theme === "floral") {
+    ctx.strokeStyle = "rgba(210,150,175,0.36)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  } else if (theme === "celestial") {
+    ctx.strokeStyle = "rgba(140,180,240,0.34)";
+    ctx.lineWidth = 0.75;
+    ctx.stroke();
+  } else if (theme === "autumn") {
+    ctx.strokeStyle = "rgba(220,140,70,0.34)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  } else if (theme === "tide") {
+    ctx.strokeStyle = "rgba(100,190,210,0.34)";
+    ctx.lineWidth = 0.75;
+    ctx.stroke();
+  } else if (theme === "celestial_clock") {
+    ctx.strokeStyle = "rgba(190,160,100,0.32)";
+    ctx.lineWidth = 0.75;
+    ctx.stroke();
+  } else if (theme === "neon_city") {
+    ctx.strokeStyle = "rgba(80,200,190,0.3)";
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+  } else if (theme === "monoline_ink") {
+    ctx.strokeStyle = "rgba(200,190,180,0.3)";
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
   }
   ctx.restore();
 }
@@ -610,6 +1031,20 @@ export function domPreviewShellBackground(layout: CardLayoutJson): string {
       return `linear-gradient(168deg, #564070 0%, ${frame} 38%, #0a0614 72%, #030208 100%)`;
     case "planeswalker":
       return `linear-gradient(158deg, #18120e 0%, ${frame} 48%, #060403 100%)`;
+    case "floral":
+      return `linear-gradient(162deg, #1a1016 0%, #26141c 24%, ${frame} 48%, #120a0e 76%, #080406 100%)`;
+    case "celestial":
+      return `linear-gradient(165deg, #0a0e1a 0%, #121a30 32%, ${frame} 52%, #060812 78%, #03050a 100%)`;
+    case "autumn":
+      return `linear-gradient(162deg, #1c0e08 0%, #2a140c 26%, ${frame} 50%, #140a06 74%, #080402 100%)`;
+    case "tide":
+      return `linear-gradient(168deg, #061218 0%, #0c1c28 34%, ${frame} 55%, #040c12 80%, #020608 100%)`;
+    case "celestial_clock":
+      return `linear-gradient(168deg, #0e0a12 0%, #1a1420 34%, ${frame} 55%, #08060c 78%, #030205 100%)`;
+    case "neon_city":
+      return `linear-gradient(168deg, #050810 0%, #0a1420 40%, ${frame} 58%, #040a12 82%, #020308 100%)`;
+    case "monoline_ink":
+      return `linear-gradient(168deg, #12100e 0%, #1c1814 40%, ${frame} 58%, #0c0a08 80%, #060504 100%)`;
     default:
       return `linear-gradient(168deg, #1a1d24 0%, ${frame} 38%, #0e0d0c 72%, #050506 100%)`;
   }
@@ -620,6 +1055,13 @@ export function domPreviewOuterRingClass(layout: CardLayoutJson): string {
   if (theme === "trainer") return "ring-2 ring-amber-200/45";
   if (theme === "duelist") return "ring-1 ring-violet-300/40";
   if (theme === "planeswalker") return "ring-1 ring-amber-200/30";
+  if (theme === "floral") return "ring-1 ring-rose-200/35";
+  if (theme === "celestial") return "ring-1 ring-sky-200/35";
+  if (theme === "autumn") return "ring-1 ring-amber-300/35";
+  if (theme === "tide") return "ring-1 ring-cyan-200/35";
+  if (theme === "celestial_clock") return "ring-1 ring-amber-200/30";
+  if (theme === "neon_city") return "ring-1 ring-teal-300/28";
+  if (theme === "monoline_ink") return "ring-1 ring-stone-300/25";
   return "ring-1 ring-white/10";
 }
 
@@ -658,6 +1100,8 @@ export function domPreviewRoundedClass(layout: CardLayoutJson): string {
   const theme = normalizeTcgTheme(layout.tcgTheme);
   if (theme === "trainer") return "rounded-2xl";
   if (theme === "duelist") return "rounded-md";
+  if (theme === "floral" || theme === "autumn") return "rounded-2xl";
+  if (theme === "neon_city") return "rounded-lg";
   return "rounded-xl";
 }
 
@@ -666,5 +1110,10 @@ export function domPreviewArtRoundedClass(layout: CardLayoutJson): string {
   if (theme === "trainer") return "rounded-xl";
   if (theme === "duelist") return "rounded";
   if (theme === "planeswalker") return "rounded-md";
+  if (theme === "floral" || theme === "autumn" || theme === "monoline_ink")
+    return "rounded-xl";
+  if (theme === "celestial" || theme === "tide" || theme === "celestial_clock")
+    return "rounded-lg";
+  if (theme === "neon_city") return "rounded-md";
   return "rounded-lg";
 }

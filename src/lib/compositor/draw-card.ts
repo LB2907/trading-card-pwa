@@ -176,6 +176,11 @@ function wrappedLinesHeight(lines: string[], lineH: number): number {
   return h;
 }
 
+/** System stack only — iOS Safari canvas can skip or glitch text drawn with custom/webfont families. */
+function watermarkFont(sizePx: number): string {
+  return `600 ${sizePx}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+}
+
 function drawExportWatermark(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -184,20 +189,19 @@ function drawExportWatermark(
 ): void {
   const t = text.trim();
   if (!t) return;
-  const size = Math.max(15, Math.round(width * 0.08));
-  const step = Math.max(size * 2.8, width * 0.5);
+  const size = Math.max(12, Math.round(width * 0.055));
+  const step = Math.max(size * 3.2, width * 0.55);
   ctx.save();
   ctx.translate(width / 2, h / 2);
   ctx.rotate((-26 * Math.PI) / 180);
-  ctx.font = canvasFontSans(800, size);
+  ctx.font = watermarkFont(size);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.lineWidth = Math.max(1, size * 0.06);
   for (let y = -h; y <= h; y += step) {
     for (let x = -width * 1.2; x <= width * 1.2; x += step) {
-      ctx.strokeStyle = "rgba(0,0,0,0.11)";
-      ctx.strokeText(t, x, y);
-      ctx.fillStyle = "rgba(255,255,255,0.14)";
+      ctx.fillStyle = "rgba(0,0,0,0.045)";
+      ctx.fillText(t, x + 0.5, y + 0.5);
+      ctx.fillStyle = "rgba(255,255,255,0.055)";
       ctx.fillText(t, x, y);
     }
   }
@@ -290,9 +294,38 @@ export function drawTradingCard(
   }
 
   ctx.fillStyle =
-    theme === "trainer" ? "#f8fafc" : theme === "duelist" ? "#ede9fe" : "#f8fafc";
+    theme === "trainer"
+      ? "#f8fafc"
+      : theme === "duelist"
+        ? "#ede9fe"
+        : theme === "floral"
+          ? "#fce7f0"
+          : theme === "celestial"
+            ? "#e8f0ff"
+            : theme === "autumn"
+              ? "#ffe8d4"
+              : theme === "tide"
+                ? "#dff8fc"
+                : theme === "celestial_clock"
+                  ? "#f5ecd8"
+                  : theme === "neon_city"
+                    ? "#ecf8f8"
+                    : theme === "monoline_ink"
+                      ? "#f2ebe3"
+                      : "#f8fafc";
   ctx.shadowColor = "rgba(0,0,0,0.55)";
-  ctx.shadowBlur = theme === "duelist" ? 5 : 8;
+  ctx.shadowBlur =
+    theme === "duelist"
+      ? 5
+      : theme === "floral" || theme === "autumn"
+        ? 6
+        : theme === "celestial" || theme === "tide"
+          ? 7
+          : theme === "neon_city"
+            ? 6
+            : theme === "celestial_clock" || theme === "monoline_ink"
+              ? 6
+              : 8;
   ctx.shadowOffsetY = 1.5;
   let ny = y + 3;
   for (const line of nameLines) {
@@ -360,7 +393,21 @@ export function drawTradingCard(
       ? "rgba(241,245,249,0.88)"
       : theme === "duelist"
         ? "rgba(221,214,255,0.78)"
-        : "rgba(248,250,252,0.72)";
+        : theme === "floral"
+          ? "rgba(252,231,243,0.86)"
+          : theme === "celestial"
+            ? "rgba(216,228,255,0.84)"
+            : theme === "autumn"
+              ? "rgba(255,224,190,0.86)"
+              : theme === "tide"
+                ? "rgba(200,240,248,0.82)"
+                : theme === "celestial_clock"
+                  ? "rgba(235,220,195,0.84)"
+                  : theme === "neon_city"
+                    ? "rgba(210,240,238,0.82)"
+                    : theme === "monoline_ink"
+                      ? "rgba(228,218,208,0.82)"
+                      : "rgba(248,250,252,0.72)";
   applyTypeLineFont(ctx, theme, layout.typeFontSize);
   const typeMaxW = Math.max(40, gx - textInsetX - 8);
   const typeLines = wrapText(ctx, instance.typeLine || "", typeMaxW);
@@ -579,7 +626,28 @@ export function exportCardAsBlob(
   drawTradingCard(ctx, { ...opt, width: cssW, pixelRatio: pr });
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
+      (b) => {
+        if (b) {
+          resolve(b);
+          return;
+        }
+        void (async () => {
+          try {
+            const dataUrl =
+              mime === "image/png"
+                ? canvas.toDataURL(mime)
+                : canvas.toDataURL(mime, quality);
+            const out = await fetch(dataUrl).then((r) => r.blob());
+            if (!out.size) {
+              reject(new Error("Export image encoding failed"));
+              return;
+            }
+            resolve(out);
+          } catch {
+            reject(new Error("Export image encoding failed"));
+          }
+        })();
+      },
       mime,
       mime === "image/png" ? undefined : quality,
     );

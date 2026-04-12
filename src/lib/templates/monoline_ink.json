@@ -1,0 +1,16 @@
+{
+  "id": "monoline_ink",
+  "name": "Monoline ink",
+  "tcgTheme": "monoline_ink",
+  "artFlex": 3.25,
+  "frameColor": "#161210",
+  "accentColor": "#d8cfc4",
+  "artMatColor": "#0a0908",
+  "innerPadding": 14,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 14,
+  "rarityGemSize": 26
+}

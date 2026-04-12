@@ -1,0 +1,16 @@
+{
+  "id": "neon_city",
+  "name": "Neon city",
+  "tcgTheme": "neon_city",
+  "artFlex": 3.26,
+  "frameColor": "#0c0a14",
+  "accentColor": "#4ecdc4",
+  "artMatColor": "#050508",
+  "innerPadding": 12,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 14,
+  "rarityGemSize": 26
+}

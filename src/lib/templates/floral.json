@@ -1,0 +1,16 @@
+{
+  "id": "floral",
+  "name": "Floral",
+  "tcgTheme": "floral",
+  "artFlex": 3.26,
+  "frameColor": "#2a1822",
+  "accentColor": "#d489a8",
+  "artMatColor": "#0f080c",
+  "innerPadding": 13,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 14,
+  "rarityGemSize": 26
+}

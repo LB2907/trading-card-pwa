@@ -1,0 +1,16 @@
+{
+  "id": "celestial",
+  "name": "Celestial",
+  "tcgTheme": "celestial",
+  "artFlex": 3.26,
+  "frameColor": "#141a2e",
+  "accentColor": "#9ec5ff",
+  "artMatColor": "#060a14",
+  "innerPadding": 13,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 14,
+  "rarityGemSize": 26
+}

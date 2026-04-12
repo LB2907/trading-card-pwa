@@ -1,0 +1,16 @@
+{
+  "id": "tide",
+  "name": "Tide",
+  "tcgTheme": "tide",
+  "artFlex": 3.27,
+  "frameColor": "#0f2430",
+  "accentColor": "#5ec4d4",
+  "artMatColor": "#050c12",
+  "innerPadding": 12,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 14,
+  "rarityGemSize": 26
+}

@@ -22,6 +22,7 @@ import type { CardInstance } from "@/lib/db/schema";
 import { withPlaybackMime } from "@/lib/media/card-media-mode";
 import { loadUserBlob } from "@/lib/media/storage";
 import { CARD_TEXT_BAND_FLEX_WEIGHT } from "@/lib/compositor/layout-metrics";
+import { ThemedMotifOverlay } from "@/components/themed-motif-overlay";
 import { normalizeTcgTheme } from "@/lib/tcg-theme-base";
 
 const ASPECT = 2.5 / 3.5;
@@ -108,13 +109,14 @@ export function CardDomPreview({
 
   return (
     <div
-      className={`font-sans flex w-full min-h-0 flex-col overflow-hidden shadow-xl ${outerRing} ${roundOuter}`}
+      className={`font-sans relative flex w-full min-h-0 flex-col overflow-hidden shadow-xl ${outerRing} ${roundOuter}`}
       style={{
         aspectRatio: `${ASPECT}`,
         boxShadow: shellShadow,
         background: shellBg,
       }}
     >
+      <ThemedMotifOverlay theme={theme} />
       <div
         className={`relative mx-2 mt-2 flex min-h-0 items-center justify-center overflow-hidden ring-1 ring-white/15 ${roundArt}`}
         style={{
@@ -163,10 +165,31 @@ export function CardDomPreview({
                 ? "bg-gradient-to-b from-[#274a78]/95 to-[#1a3050]/90 ring-1 ring-white/10"
                 : theme === "duelist"
                   ? "bg-gradient-to-b from-[#1a0f2e]/95 to-[#10081c]/90 ring-1 ring-violet-400/25"
-                  : "bg-gradient-to-b from-white/[0.07] to-white/[0.02] ring-1 ring-white/10"
+                  : theme === "floral"
+                    ? "bg-gradient-to-b from-[#3d2230]/95 to-[#26141c]/90 ring-1 ring-rose-300/25"
+                    : theme === "celestial"
+                      ? "bg-gradient-to-b from-[#1a2438]/95 to-[#0f1424]/90 ring-1 ring-sky-300/22"
+                      : theme === "autumn"
+                        ? "bg-gradient-to-b from-[#3d2010]/95 to-[#261208]/90 ring-1 ring-amber-400/22"
+                        : theme === "tide"
+                          ? "bg-gradient-to-b from-[#0f2838]/95 to-[#081820]/90 ring-1 ring-cyan-300/22"
+                          : theme === "celestial_clock"
+                            ? "bg-gradient-to-b from-[#2a2234]/95 to-[#16101c]/90 ring-1 ring-amber-200/22"
+                            : theme === "neon_city"
+                              ? "bg-gradient-to-b from-[#0c1420]/95 to-[#060a10]/90 ring-1 ring-teal-400/20"
+                              : theme === "monoline_ink"
+                                ? "bg-gradient-to-b from-[#242018]/95 to-[#14100c]/90 ring-1 ring-stone-400/18"
+                                : "bg-gradient-to-b from-white/[0.07] to-white/[0.02] ring-1 ring-white/10"
           }`}
         >
-          {theme === "skirmish" ? (
+          {theme === "skirmish" ||
+          theme === "floral" ||
+          theme === "celestial" ||
+          theme === "autumn" ||
+          theme === "tide" ||
+          theme === "celestial_clock" ||
+          theme === "neon_city" ||
+          theme === "monoline_ink" ? (
             <div
               className="h-px w-3 shrink-0 rounded-full"
               style={{ backgroundColor: rv.primary, opacity: 0.85 }}

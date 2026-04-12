@@ -1,0 +1,16 @@
+{
+  "id": "autumn",
+  "name": "Autumn",
+  "tcgTheme": "autumn",
+  "artFlex": 3.25,
+  "frameColor": "#2a1810",
+  "accentColor": "#d4a056",
+  "artMatColor": "#10080a",
+  "innerPadding": 13,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 14,
+  "rarityGemSize": 26
+}

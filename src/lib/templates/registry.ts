@@ -1,5 +1,12 @@
 import defaultLayout from "@/lib/default-layout.json";
+import templateAutumn from "@/lib/templates/autumn.json";
+import templateCelestial from "@/lib/templates/celestial.json";
+import templateCelestialClock from "@/lib/templates/celestial_clock.json";
 import templateDuelist from "@/lib/templates/duelist.json";
+import templateFloral from "@/lib/templates/floral.json";
+import templateMonolineInk from "@/lib/templates/monoline_ink.json";
+import templateNeonCity from "@/lib/templates/neon_city.json";
+import templateTide from "@/lib/templates/tide.json";
 import templatePlaneswalker from "@/lib/templates/planeswalker.json";
 import templateTrainer from "@/lib/templates/trainer.json";
 
@@ -9,6 +16,13 @@ const BUILTIN_LAYOUT_JSON: Record<string, string> = {
   tpl_minimal: JSON.stringify(templatePlaneswalker),
   tpl_aurora: JSON.stringify(templateTrainer),
   tpl_arena: JSON.stringify(templateDuelist),
+  tpl_floral: JSON.stringify(templateFloral),
+  tpl_celestial: JSON.stringify(templateCelestial),
+  tpl_autumn: JSON.stringify(templateAutumn),
+  tpl_tide: JSON.stringify(templateTide),
+  tpl_celestial_clock: JSON.stringify(templateCelestialClock),
+  tpl_neon_city: JSON.stringify(templateNeonCity),
+  tpl_monoline_ink: JSON.stringify(templateMonolineInk),
 };
 
 export function layoutJsonForBuiltinTemplateId(id: string): string | null {
