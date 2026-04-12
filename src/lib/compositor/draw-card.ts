@@ -211,6 +211,12 @@ export function drawExportWatermarkOnRect(
   const spanW = width * (sheet ? 1.35 : 1.2);
   const spanH = h * (sheet ? 1.35 : 1.0);
   ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.shadowColor = "transparent";
   ctx.translate(width / 2, h / 2);
   ctx.rotate((-26 * Math.PI) / 180);
   ctx.font = watermarkFont(fontPx);
@@ -244,6 +250,8 @@ export function drawTradingCard(
   const outerR = outerRadiusForTheme(theme);
   const innerArtR = artInnerRadiusForTheme(theme);
 
+  /** Card body only — watermark is composited afterward via offscreen + round-rect clip (Safari iOS). */
+  ctx.save();
   ctx.beginPath();
   pathRoundRect(ctx, 0, 0, width, h, outerR);
   ctx.clip();
@@ -607,7 +615,29 @@ export function drawTradingCard(
     }
   }
 
-  drawExportWatermarkOnRect(ctx, width, h, watermarkText ?? "", "card");
+  ctx.restore();
+
+  const wm = (watermarkText ?? "").trim();
+  if (wm) {
+    const pr =
+      Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
+    const bufW = Math.max(1, Math.round(width * pr));
+    const bufH = Math.max(1, Math.round(h * pr));
+    const wmCanvas = document.createElement("canvas");
+    wmCanvas.width = bufW;
+    wmCanvas.height = bufH;
+    const wmCtx = wmCanvas.getContext("2d");
+    if (wmCtx) {
+      wmCtx.setTransform(pr, 0, 0, pr, 0, 0);
+      drawExportWatermarkOnRect(wmCtx, width, h, wm, "card");
+      ctx.save();
+      ctx.beginPath();
+      pathRoundRect(ctx, 0, 0, width, h, outerR);
+      ctx.clip();
+      ctx.drawImage(wmCanvas, 0, 0, bufW, bufH, 0, 0, width, h);
+      ctx.restore();
+    }
+  }
 
   ctx.restore();
 }
