@@ -181,27 +181,46 @@ function watermarkFont(sizePx: number): string {
   return `600 ${sizePx}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
 }
 
-function drawExportWatermark(
+export type ExportWatermarkStrength = "card" | "sheet";
+
+/**
+ * Tiled diagonal watermark over a rectangle (full canvas or a single card).
+ * `sheet` is denser and more opaque — used for multi-template showcase PNGs.
+ */
+export function drawExportWatermarkOnRect(
   ctx: CanvasRenderingContext2D,
   width: number,
   h: number,
   text: string,
+  strength: ExportWatermarkStrength = "card",
 ): void {
   const t = text.trim();
   if (!t) return;
-  const size = Math.max(12, Math.round(width * 0.055));
-  const step = Math.max(size * 3.2, width * 0.55);
+  const sheet = strength === "sheet";
+  const size = Math.max(
+    sheet ? 20 : 12,
+    Math.round(width * (sheet ? 0.034 : 0.055)),
+  );
+  const fontPx = sheet ? Math.min(size, 56) : size;
+  const step = Math.max(
+    fontPx * (sheet ? 2.25 : 3.2),
+    width * (sheet ? 0.36 : 0.55),
+  );
+  const shadowA = sheet ? 0.11 : 0.045;
+  const fillA = sheet ? 0.14 : 0.055;
+  const spanW = width * (sheet ? 1.35 : 1.2);
+  const spanH = h * (sheet ? 1.35 : 1.0);
   ctx.save();
   ctx.translate(width / 2, h / 2);
   ctx.rotate((-26 * Math.PI) / 180);
-  ctx.font = watermarkFont(size);
+  ctx.font = watermarkFont(fontPx);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  for (let y = -h; y <= h; y += step) {
-    for (let x = -width * 1.2; x <= width * 1.2; x += step) {
-      ctx.fillStyle = "rgba(0,0,0,0.045)";
+  for (let y = -spanH; y <= spanH; y += step) {
+    for (let x = -spanW; x <= spanW; x += step) {
+      ctx.fillStyle = `rgba(0,0,0,${shadowA})`;
       ctx.fillText(t, x + 0.5, y + 0.5);
-      ctx.fillStyle = "rgba(255,255,255,0.055)";
+      ctx.fillStyle = `rgba(255,255,255,${fillA})`;
       ctx.fillText(t, x, y);
     }
   }
@@ -588,7 +607,7 @@ export function drawTradingCard(
     }
   }
 
-  drawExportWatermark(ctx, width, h, watermarkText ?? "");
+  drawExportWatermarkOnRect(ctx, width, h, watermarkText ?? "", "card");
 
   ctx.restore();
 }

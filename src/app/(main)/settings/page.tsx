@@ -24,6 +24,7 @@ import {
   pullHistories,
   tcgSets,
 } from "@/lib/db/schema";
+import { buildTemplateShowcasePngBlob } from "@/lib/export/build-template-showcase-image";
 import { downloadBlobLocally } from "@/lib/export-card-download";
 import {
   clearExportDirectory,
@@ -66,6 +67,7 @@ export default function SettingsPage() {
   const [deleteSetId, setDeleteSetId] = useState<string | null>(null);
   const [setsBusy, setSetsBusy] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
+  const [showcaseBusy, setShowcaseBusy] = useState(false);
   const [exportDirLabel, setExportDirLabel] = useState("");
   const [watermarkDraft, setWatermarkDraft] = useState("");
   const folderExportSupported = isFolderExportSupported();
@@ -442,6 +444,48 @@ export default function SettingsPage() {
               }}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/80 shadow-sm">
+        <CardHeader>
+          <CardTitle>Template preview sheet</CardTitle>
+          <CardDescription>
+            Download one PNG with every built-in Studio frame. Shared neutral art and the same
+            placeholder name, type line, rules text, and flavor on each card so you can compare
+            layouts side by side. If you set{" "}
+            <span className="text-foreground">Watermark text</span> under Export defaults, a
+            denser diagonal watermark is drawn across the entire sheet (stronger than on single-card
+            exports).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={showcaseBusy}
+            onClick={() => {
+              primeExportFolderWriteFromUserGesture();
+              void (async () => {
+                setShowcaseBusy(true);
+                setMsg(null);
+                try {
+                  const blob = await buildTemplateShowcasePngBlob();
+                  const name = `card_template_showcase_${new Date().toISOString().slice(0, 10)}.png`;
+                  await downloadBlobLocally(blob, name);
+                  setMsg(
+                    `Saved ${name} (export folder if set, otherwise your download bar).`,
+                  );
+                } catch (e) {
+                  setMsg(e instanceof Error ? e.message : String(e));
+                } finally {
+                  setShowcaseBusy(false);
+                }
+              })();
+            }}
+          >
+            {showcaseBusy ? "Building sheet…" : "Download all template previews (PNG)"}
+          </Button>
         </CardContent>
       </Card>
 

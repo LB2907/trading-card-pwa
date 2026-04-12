@@ -10,6 +10,21 @@ import templateTide from "@/lib/templates/tide.json";
 import templatePlaneswalker from "@/lib/templates/planeswalker.json";
 import templateTrainer from "@/lib/templates/trainer.json";
 
+/** Display order for built-in templates (showcase sheet, docs). */
+export const BUILTIN_TEMPLATE_IDS_ORDERED: readonly string[] = [
+  "tpl_default",
+  "tpl_minimal",
+  "tpl_aurora",
+  "tpl_arena",
+  "tpl_floral",
+  "tpl_celestial",
+  "tpl_autumn",
+  "tpl_tide",
+  "tpl_celestial_clock",
+  "tpl_neon_city",
+  "tpl_monoline_ink",
+];
+
 /** Layout JSON for built-in template ids (instant; no DB round-trip). */
 const BUILTIN_LAYOUT_JSON: Record<string, string> = {
   tpl_default: JSON.stringify(defaultLayout),
