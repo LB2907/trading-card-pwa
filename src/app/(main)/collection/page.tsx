@@ -227,7 +227,7 @@ export default function CollectionPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Collection</h1>
+          <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">Collection</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Browse, filter, and export cards from your local vault.
           </p>

@@ -67,7 +67,7 @@ export default function AdminModerationPage() {
     <div className="mx-auto flex max-w-2xl flex-col gap-6 pb-24">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Moderation queue</h1>
+          <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-foreground">Moderation queue</h1>
           <p className="mt-1 text-xs text-muted-foreground">
             Requires{" "}
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.7rem]">admin</code> or{" "}
