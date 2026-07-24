@@ -1,3 +1,5 @@
+import { THEME_DESCRIPTORS } from "@/lib/compositor/theme-descriptors";
+
 export type TcgTheme =
   | "skirmish"
   | "planeswalker"
@@ -38,67 +40,9 @@ export function normalizeTcgTheme(raw: unknown): TcgTheme {
 }
 
 export function outerRadiusForTheme(theme: TcgTheme): number {
-  switch (theme) {
-    case "trainer":
-      return 18;
-    case "duelist":
-      return 5;
-    case "planeswalker":
-      return 11;
-    case "floral":
-      return 15;
-    case "autumn":
-      return 14;
-    case "celestial":
-      return 14;
-    case "tide":
-      return 12;
-    case "celestial_clock":
-      return 12;
-    case "neon_city":
-      return 9;
-    case "monoline_ink":
-      return 16;
-    case "boudoir":
-      return 17;
-    case "gilded":
-      return 8;
-    case "obsidian":
-      return 6;
-    default:
-      return 14;
-  }
+  return THEME_DESCRIPTORS[theme].outerRadius;
 }
 
 export function artInnerRadiusForTheme(theme: TcgTheme): number {
-  switch (theme) {
-    case "duelist":
-      return 4;
-    case "trainer":
-      return 14;
-    case "planeswalker":
-      return 6;
-    case "floral":
-      return 10;
-    case "autumn":
-      return 10;
-    case "celestial":
-      return 9;
-    case "tide":
-      return 8;
-    case "celestial_clock":
-      return 7;
-    case "neon_city":
-      return 6;
-    case "monoline_ink":
-      return 11;
-    case "boudoir":
-      return 12;
-    case "gilded":
-      return 5;
-    case "obsidian":
-      return 3;
-    default:
-      return 9;
-  }
+  return THEME_DESCRIPTORS[theme].artInnerRadius;
 }
