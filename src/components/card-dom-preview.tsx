@@ -23,6 +23,7 @@ import { withPlaybackMime } from "@/lib/media/card-media-mode";
 import { loadUserBlob } from "@/lib/media/storage";
 import { CARD_TEXT_BAND_FLEX_WEIGHT } from "@/lib/compositor/layout-metrics";
 import { ThemedMotifOverlay } from "@/components/themed-motif-overlay";
+import { FoilOverlay } from "@/components/foil-overlay";
 import { normalizeTcgTheme } from "@/lib/tcg-theme-base";
 
 const ASPECT = 2.5 / 3.5;
@@ -117,6 +118,7 @@ export function CardDomPreview({
       }}
     >
       <ThemedMotifOverlay theme={theme} />
+      <FoilOverlay rarity={instance.rarity} />
       <div
         className={`relative mx-2 mt-2 flex min-h-0 items-center justify-center overflow-hidden ring-1 ring-white/15 ${roundArt}`}
         style={{
