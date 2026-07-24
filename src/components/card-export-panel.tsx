@@ -19,6 +19,11 @@ import {
 } from "@/lib/export/card-rendered-media";
 import { cardMediaMode } from "@/lib/media/card-media-mode";
 import {
+  DEFAULT_EXPORT_RESOLUTION,
+  EXPORT_RESOLUTIONS,
+  type ExportResolution,
+} from "@/lib/compositor/card-resolution";
+import {
   hydrateExportDirHandleFromStorage,
   primeExportFolderWriteFromUserGesture,
 } from "@/lib/export-preferences";
@@ -54,11 +59,17 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [omitWatermark, setOmitWatermark] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
-  const compositedOpts = useMemo<CardExportOptions | undefined>(
-    () => (omitWatermark ? { omitWatermark: true } : undefined),
-    [omitWatermark],
+  const [resolution, setResolution] = useState<ExportResolution>(
+    DEFAULT_EXPORT_RESOLUTION,
   );
+  const [note, setNote] = useState<string | null>(null);
+  const compositedOpts = useMemo<CardExportOptions | undefined>(() => {
+    const opts: CardExportOptions = {
+      pixelRatio: EXPORT_RESOLUTIONS[resolution].ratio,
+    };
+    if (omitWatermark) opts.omitWatermark = true;
+    return opts;
+  }, [omitWatermark, resolution]);
   const [webpOk, setWebpOk] = useState(false);
   const [videoFmt, setVideoFmt] = useState<{ ext: "mp4" | "webm" } | null>(
     null,
@@ -111,6 +122,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
           setOpen(true);
           setNote(null);
           setOmitWatermark(false);
+          setResolution(DEFAULT_EXPORT_RESOLUTION);
         }}
       >
         Export / share…
@@ -163,6 +175,43 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                     this dialog. Source-only downloads are unchanged.
                   </p>
                 </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  Resolution
+                </p>
+                <div className="grid grid-cols-3 gap-2" role="group" aria-label="Export resolution">
+                  {(Object.keys(EXPORT_RESOLUTIONS) as ExportResolution[]).map(
+                    (key) => {
+                      const p = EXPORT_RESOLUTIONS[key];
+                      const active = resolution === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          aria-pressed={active}
+                          disabled={busy}
+                          onClick={() => setResolution(key)}
+                          className={`flex flex-col items-center gap-0.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors disabled:opacity-50 ${
+                            active
+                              ? "border-primary bg-primary/12 text-foreground"
+                              : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
+                          }`}
+                        >
+                          <span>{p.label}</span>
+                          <span className="text-[10px] tabular-nums opacity-70">
+                            {p.width}×{p.height}
+                          </span>
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Applies to still images (PNG/JPEG/WebP). Higher = sharper &
+                  larger files; Web is best for quick sharing.
+                </p>
               </div>
 
               <div className="flex flex-col gap-2">

@@ -75,7 +75,7 @@ export async function getCompositedCardPngBlob(
       layout,
       artImage: source,
       width: CARD_LAYOUT_WIDTH,
-      pixelRatio: CARD_EXPORT_PIXEL_RATIO,
+      pixelRatio: opts?.pixelRatio ?? CARD_EXPORT_PIXEL_RATIO,
       watermarkText,
     });
   } finally {
@@ -111,7 +111,7 @@ export async function getCompositedCardJpegBlob(
         layout,
         artImage: source,
         width: CARD_LAYOUT_WIDTH,
-        pixelRatio: CARD_EXPORT_PIXEL_RATIO,
+        pixelRatio: opts?.pixelRatio ?? CARD_EXPORT_PIXEL_RATIO,
         watermarkText,
       },
       "image/jpeg",
@@ -153,7 +153,7 @@ export async function getCompositedCardWebpBlob(
         layout,
         artImage: source,
         width: CARD_LAYOUT_WIDTH,
-        pixelRatio: CARD_EXPORT_PIXEL_RATIO,
+        pixelRatio: opts?.pixelRatio ?? CARD_EXPORT_PIXEL_RATIO,
         watermarkText,
       },
       "image/webp",
