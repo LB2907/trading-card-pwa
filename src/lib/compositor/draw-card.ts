@@ -2,6 +2,8 @@ import type { CardInstance } from "@/lib/db/schema";
 import type { CardLayoutJson } from "@/lib/card-layout";
 import { rarityVisual } from "@/lib/card-visual";
 import { rarityGemShort } from "@/lib/rarity";
+import { rarityTier } from "@/lib/rarity";
+import { foilFinishForTier, paintFoilFinish } from "@/lib/compositor/foil";
 import {
   abilityPanelStyle,
   abilityTextColor,
@@ -622,6 +624,17 @@ export function drawTradingCard(
       y += flavorLineH;
     }
   }
+
+  // Rarity foil / finish over the whole face, still inside the outer clip so
+  // it follows the rounded corners; the watermark composites on top of it.
+  paintFoilFinish(
+    ctx,
+    width,
+    h,
+    outerR,
+    foilFinishForTier(rarityTier(instance.rarity)),
+    rv,
+  );
 
   ctx.restore();
 
