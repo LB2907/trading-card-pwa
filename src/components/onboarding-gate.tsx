@@ -8,11 +8,10 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
   const [done, setDone] = useState(true);
 
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      setDone(isOnboardingDone());
-      setReady(true);
-    });
-    return () => cancelAnimationFrame(id);
+    // Plain effect (no rAF): rAF never fires in non-composited tabs, which
+    // left the whole app blank when opened in the background.
+    setDone(isOnboardingDone());
+    setReady(true);
   }, []);
 
   if (!ready) return null;

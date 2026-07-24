@@ -74,13 +74,10 @@ export default function SettingsPage() {
   const folderExportSupported = isFolderExportSupported();
 
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      setVault(isVaultEnabled());
-      setBlur(isBlurBackground());
-      setExportDirLabel(getExportDirectoryLabel());
-      setWatermarkDraft(getExportWatermarkText());
-    });
-    return () => cancelAnimationFrame(id);
+    setVault(isVaultEnabled());
+    setBlur(isBlurBackground());
+    setExportDirLabel(getExportDirectoryLabel());
+    setWatermarkDraft(getExportWatermarkText());
   }, []);
 
   useEffect(() => {
