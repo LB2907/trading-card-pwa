@@ -5,7 +5,9 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useReducer,
   useState,
+  useSyncExternalStore,
 } from "react";
 import {
   initDatabase,
@@ -20,30 +22,29 @@ import { getSessionKeyBytes, isEncryptionEnabled } from "@/lib/vault/keyring";
 
 const DbCtx = createContext<TradingCardDb | null>(null);
 
+const emptySubscribe = () => () => {};
+
 function vaultIsLocked(): boolean {
-  if (typeof window === "undefined") return false;
   return isEncryptionEnabled() && getSessionKeyBytes() === null;
 }
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<TradingCardDb | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  // Checked once on mount (server renders unlocked=false HTML; the DB init
-  // effect below only runs client-side anyway). Bumped after a successful unlock.
-  const [locked, setLocked] = useState(false);
+  // Re-render trigger after a successful unlock (session key appears in
+  // sessionStorage, which useSyncExternalStore then re-reads).
+  const [, rerender] = useReducer((x: number) => x + 1, 0);
+  const locked = useSyncExternalStore(emptySubscribe, vaultIsLocked, () => false);
 
   useEffect(() => {
-    if (vaultIsLocked()) {
-      setLocked(true);
-      return;
-    }
+    if (locked) return;
     initDatabase()
       .then(setDb)
       .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
   }, [locked]);
 
   if (locked) {
-    return <VaultUnlockScreen onUnlocked={() => setLocked(false)} />;
+    return <VaultUnlockScreen onUnlocked={rerender} />;
   }
 
   if (err) {
