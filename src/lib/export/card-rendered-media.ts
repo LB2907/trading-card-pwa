@@ -8,6 +8,7 @@ import {
   drawTradingCard,
   type DrawCardOptions,
 } from "@/lib/compositor/draw-card";
+import { ensureCardFontsLoaded } from "@/lib/compositor/canvas-font";
 import { parseLayout } from "@/lib/card-layout";
 import { cardMediaMode, withPlaybackMime } from "@/lib/media/card-media-mode";
 import { loadArtForCompositor } from "@/lib/media/compositor-source";
@@ -192,6 +193,7 @@ export async function buildCompositedCardGifBlob(
   row: CardExportRow,
   opts?: { watermarkText?: string },
 ): Promise<Blob> {
+  await ensureCardFontsLoaded();
   const rawBlob = await loadUserBlob(row.instance.mediaPath);
   if (!rawBlob) {
     throw new Error("Art file missing from local storage — cannot render card.");
@@ -278,6 +280,7 @@ export async function buildCompositedCardVideoBlob(
   row: CardExportRow,
   opts?: { watermarkText?: string },
 ): Promise<Blob> {
+  await ensureCardFontsLoaded();
   if (cardMediaMode(row.instance) !== "video") {
     throw new Error("Card video export only works when the art file is a video.");
   }

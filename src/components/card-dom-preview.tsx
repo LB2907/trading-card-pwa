@@ -197,8 +197,12 @@ export function CardDomPreview({
             />
           ) : null}
           <h2
-            className="min-w-0 flex-1 break-words py-0.5 text-left font-semibold leading-snug tracking-tight text-zinc-50 [overflow-wrap:anywhere] line-clamp-4"
-            style={{ fontSize: layout.nameFontSize }}
+            className="min-w-0 flex-1 break-words py-0.5 text-left font-bold leading-snug text-zinc-50 [overflow-wrap:anywhere] line-clamp-4"
+            style={{
+              fontSize: layout.nameFontSize,
+              fontFamily: "var(--font-display)",
+              letterSpacing: "0.01em",
+            }}
           >
             {name}
           </h2>
