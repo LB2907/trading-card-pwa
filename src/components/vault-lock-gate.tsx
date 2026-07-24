@@ -50,7 +50,7 @@ export function VaultLockGate({ children }: { children: React.ReactNode }) {
       {error && <p className="text-sm text-red-400">{error}</p>}
       <button
         type="button"
-        className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white"
+        className="rounded-lg bg-[var(--tc-btn-primary-bg)] px-4 py-2 text-sm font-medium text-[#14100b] hover:bg-[var(--tc-btn-primary-hover)]"
         onClick={async () => {
           setError(null);
           const ok = await verifyPin(pin);

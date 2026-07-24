@@ -1,18 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
+import "@fontsource/fraunces/600.css";
+import "@fontsource/fraunces/700.css";
 import "./globals.css";
 import { SerwistProvider } from "@/components/serwist-provider";
 import { AppProviders } from "@/components/app-providers";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 const APP = "Trading Card Studio";
 
@@ -26,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6b4ee6",
+  themeColor: "#0c0a09",
 };
 
 export default function RootLayout({
@@ -38,10 +31,10 @@ export default function RootLayout({
     <html
       lang="en"
       dir="ltr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full`}
+      className={`${GeistSans.variable} ${GeistMono.variable} h-full`}
     >
       <body
-        className={`${geistSans.className} flex min-h-full flex-col bg-[var(--tc-surface)] antialiased`}
+        className={`${GeistSans.className} flex min-h-full flex-col bg-[var(--tc-surface)] antialiased`}
       >
         <SerwistProvider>
           <AppProviders>{children}</AppProviders>

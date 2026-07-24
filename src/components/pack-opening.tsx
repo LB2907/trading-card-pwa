@@ -84,7 +84,7 @@ export function PackOpening({ cards, onDone }: Props) {
           />
         </div>
         <motion.p
-          className="mb-8 text-center text-xs font-semibold uppercase tracking-[0.35em] text-violet-200/80"
+          className="mb-8 text-center text-xs font-semibold uppercase tracking-[0.35em] text-[var(--tc-accent-hover)]/85"
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -121,7 +121,7 @@ export function PackOpening({ cards, onDone }: Props) {
               </span>
             </div>
             <motion.div
-              className="absolute -right-1 -top-1 flex h-9 w-9 items-center justify-center rounded-full border border-violet-400/40 bg-violet-950/80 text-violet-200 shadow-lg"
+              className="absolute -right-1 -top-1 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--tc-accent)]/40 bg-[#171412]/90 text-[var(--tc-accent-hover)] shadow-lg"
               animate={{ rotate: [0, 12, 0], scale: [1, 1.06, 1] }}
               transition={{ duration: 1.8, repeat: Infinity }}
             >
@@ -141,7 +141,7 @@ export function PackOpening({ cards, onDone }: Props) {
       <div className="fixed inset-0 z-[100] flex flex-col bg-gradient-to-b from-zinc-950 via-black to-zinc-950 p-4 pt-10">
         <div className="mx-auto mb-2 flex w-full max-w-4xl items-end justify-between gap-4 px-2">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-violet-400/90">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--tc-accent)]/95">
               Reveal
             </p>
             <p className="text-lg font-semibold text-white">
@@ -209,7 +209,7 @@ export function PackOpening({ cards, onDone }: Props) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92 p-4 backdrop-blur-md">
       <Card className="max-h-[90vh] w-full max-w-lg overflow-hidden border-border/80 shadow-2xl">
-        <CardHeader className="border-b border-border/60 bg-gradient-to-r from-violet-950/40 to-transparent pb-4">
+        <CardHeader className="border-b border-border/60 bg-gradient-to-r from-[color-mix(in_srgb,var(--tc-rose)_14%,transparent)] to-transparent pb-4">
           <CardTitle className="text-xl">Pack opened</CardTitle>
           <CardDescription>
             {cards.length} card{cards.length === 1 ? "" : "s"} added to your

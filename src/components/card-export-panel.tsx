@@ -273,7 +273,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full border-violet-500/40 text-violet-200 hover:bg-violet-950/40 hover:text-violet-100"
+                      className="w-full border-[var(--tc-accent)]/40 text-[var(--tc-accent-hover)] hover:bg-[color-mix(in_srgb,var(--tc-accent)_12%,transparent)] hover:text-[var(--tc-accent-hover)]"
                       disabled={busy}
                       onClick={() =>
                         void (async () => {
@@ -306,7 +306,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full border-violet-500/40 text-violet-200 hover:bg-violet-950/40 hover:text-violet-100"
+                        className="w-full border-[var(--tc-accent)]/40 text-[var(--tc-accent-hover)] hover:bg-[color-mix(in_srgb,var(--tc-accent)_12%,transparent)] hover:text-[var(--tc-accent-hover)]"
                         disabled={busy}
                         onClick={() =>
                           void (async () => {

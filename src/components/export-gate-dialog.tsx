@@ -15,7 +15,7 @@ export function ExportGateDialog({ onConfirm, label }: Props) {
     <>
       <button
         type="button"
-        className="w-full rounded-xl bg-violet-600 py-3 text-center text-sm font-semibold text-white"
+        className="w-full rounded-xl bg-[var(--tc-btn-primary-bg)] py-3 text-center text-sm font-semibold text-[#14100b] hover:bg-[var(--tc-btn-primary-hover)]"
         onClick={() => setOpen(true)}
       >
         {label}
@@ -38,7 +38,7 @@ export function ExportGateDialog({ onConfirm, label }: Props) {
               </button>
               <button
                 type="button"
-                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white"
+                className="rounded-lg bg-[var(--tc-btn-primary-bg)] px-4 py-2 text-sm font-medium text-[#14100b] hover:bg-[var(--tc-btn-primary-hover)]"
                 onClick={() => {
                   setOpen(false);
                   onConfirm();

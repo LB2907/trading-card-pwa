@@ -28,7 +28,7 @@ export function ConfirmDialog({
   const confirmClass =
     variant === "danger"
       ? "bg-red-600 hover:bg-red-500"
-      : "bg-violet-600 hover:bg-violet-500";
+      : "bg-[var(--tc-btn-primary-bg)] hover:bg-[var(--tc-btn-primary-hover)] text-[#14100b]";
 
   return (
     <div
