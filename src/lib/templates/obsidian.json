@@ -1,7 +1,7 @@
 {
   "id": "obsidian",
   "name": "Obsidian",
-  "tcgTheme": "skirmish",
+  "tcgTheme": "obsidian",
   "artFlex": 3.3,
   "frameColor": "#17181b",
   "accentColor": "#aeb6c2",

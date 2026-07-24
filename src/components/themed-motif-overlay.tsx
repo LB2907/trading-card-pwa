@@ -1,5 +1,7 @@
 import { AutumnDomMotifOverlay } from "@/components/autumn-dom-overlay";
 import { BoudoirDomMotifOverlay } from "@/components/boudoir-dom-overlay";
+import { GildedDomMotifOverlay } from "@/components/gilded-dom-overlay";
+import { ObsidianDomMotifOverlay } from "@/components/obsidian-dom-overlay";
 import { CelestialClockDomMotifOverlay } from "@/components/celestial-clock-dom-overlay";
 import { CelestialDomMotifOverlay } from "@/components/celestial-dom-overlay";
 import { FloralDomMotifOverlay } from "@/components/floral-dom-overlay";
@@ -27,6 +29,10 @@ export function ThemedMotifOverlay({ theme }: { theme: TcgTheme }) {
       return <MonolineInkDomMotifOverlay />;
     case "boudoir":
       return <BoudoirDomMotifOverlay />;
+    case "gilded":
+      return <GildedDomMotifOverlay />;
+    case "obsidian":
+      return <ObsidianDomMotifOverlay />;
     default:
       return null;
   }
