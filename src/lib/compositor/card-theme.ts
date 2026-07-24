@@ -3,6 +3,7 @@ import { type RarityVisual, rarityVisual } from "@/lib/card-visual";
 import { paintAutumnBackdropMotifs } from "@/lib/compositor/autumn-motifs";
 import { paintCelestialBackdropMotifs } from "@/lib/compositor/celestial-motifs";
 import { paintCelestialClockBackdropMotifs } from "@/lib/compositor/celestial-clock-motifs";
+import { paintBoudoirBackdropMotifs } from "@/lib/compositor/boudoir-motifs";
 import { paintFloralBackdropMotifs } from "@/lib/compositor/floral-motifs";
 import { paintMonolineInkBackdropMotifs } from "@/lib/compositor/monoline-ink-motifs";
 import { paintNeonCityBackdropMotifs } from "@/lib/compositor/neon-city-motifs";
@@ -419,6 +420,26 @@ export function paintThemedBackdrop(
       paintMonolineInkBackdropMotifs(ctx, width, h, artTop, artH, accent);
       break;
     }
+    case "boudoir": {
+      const g = ctx.createLinearGradient(0, 0, width * 0.5, h * 1.04);
+      g.addColorStop(0, "#1f0f18");
+      g.addColorStop(0.3, frame);
+      g.addColorStop(0.72, "#120810");
+      g.addColorStop(1, "#070308");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const glow = ctx.createRadialGradient(
+        width * 0.82, h * 0.16, 0,
+        width * 0.7, h * 0.24, width * 0.6,
+      );
+      glow.addColorStop(0, "rgba(232,164,186,0.16)");
+      glow.addColorStop(0.45, "rgba(160,90,116,0.07)");
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, h);
+      paintBoudoirBackdropMotifs(ctx, width, h, artTop, artH, accent);
+      break;
+    }
     default: {
       const base = ctx.createLinearGradient(0, 0, width * 1.05, h * 1.02);
       base.addColorStop(0, "#1a1d24");
@@ -500,7 +521,9 @@ export function paintThemedOuterBorder(
   ctx.strokeStyle =
     theme === "trainer"
       ? "rgba(255,236,170,0.62)"
-      : theme === "floral"
+      : theme === "boudoir"
+        ? "rgba(255,214,228,0.26)"
+        : theme === "floral"
         ? "rgba(255,232,242,0.22)"
         : theme === "celestial"
           ? "rgba(210,230,255,0.28)"
@@ -518,7 +541,9 @@ export function paintThemedOuterBorder(
   ctx.lineWidth =
     theme === "trainer"
       ? 2.25
-      : theme === "floral"
+      : theme === "boudoir"
+        ? 1.35
+        : theme === "floral"
         ? 1.4
         : theme === "celestial" || theme === "autumn"
           ? 1.35
@@ -537,6 +562,10 @@ export function paintThemedOuterBorder(
     ctx.strokeStyle = accent;
     ctx.globalAlpha = 0.5;
     ctx.lineWidth = 1.35;
+  } else if (theme === "boudoir") {
+    ctx.strokeStyle = "rgba(226,158,184,0.5)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.3;
   } else if (theme === "floral") {
     ctx.strokeStyle = "rgba(236,182,206,0.48)";
     ctx.globalAlpha = 1;
@@ -619,6 +648,10 @@ export function paintThemedArtBezel(
     ctx.strokeStyle = accent;
     ctx.globalAlpha = 0.55;
     ctx.lineWidth = 1.65;
+  } else if (theme === "boudoir") {
+    ctx.strokeStyle = "rgba(222,160,188,0.5)";
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.45;
   } else if (theme === "floral") {
     ctx.strokeStyle = "rgba(228,168,196,0.52)";
     ctx.globalAlpha = 1;
@@ -682,6 +715,7 @@ export function paintThemedArtBezel(
 
   if (
     theme === "planeswalker" ||
+    theme === "boudoir" ||
     theme === "floral" ||
     theme === "celestial" ||
     theme === "autumn" ||
@@ -693,7 +727,9 @@ export function paintThemedArtBezel(
     ctx.beginPath();
     pathRoundRect(ctx, pad + 2.5, artTop + 2.5, artW - 5, artH - 5, Math.max(2, innerR - 2));
     ctx.strokeStyle =
-      theme === "floral"
+      theme === "boudoir"
+        ? "rgba(28,12,20,0.44)"
+        : theme === "floral"
         ? "rgba(32,18,26,0.42)"
         : theme === "celestial"
           ? "rgba(20,35,55,0.4)"
@@ -743,6 +779,9 @@ export function nameplateStyle(
 ): { showBar: boolean; barColor: string } {
   if (theme === "planeswalker") {
     return { showBar: true, barColor: "rgba(0,0,0,0.45)" };
+  }
+  if (theme === "boudoir") {
+    return { showBar: true, barColor: "rgba(43,18,30,0.64)" };
   }
   if (theme === "floral") {
     return { showBar: true, barColor: "rgba(42,24,34,0.62)" };
@@ -817,6 +856,14 @@ export function abilityPanelStyle(theme: TcgTheme): {
         fillBottom: "rgba(3,1,8,0.96)",
         stroke: "rgba(175,155,220,0.42)",
         innerHighlight: "rgba(200,180,255,0.1)",
+      };
+    case "boudoir":
+      return {
+        fill: "rgba(14,6,10,0.9)",
+        fillTop: "rgba(56,28,42,0.58)",
+        fillBottom: "rgba(5,2,4,0.94)",
+        stroke: "rgba(216,158,184,0.38)",
+        innerHighlight: "rgba(255,222,236,0.11)",
       };
     case "floral":
       return {
@@ -954,7 +1001,7 @@ export function drawNameplateBar(
   const r =
     theme === "duelist"
       ? 4
-      : theme === "floral" || theme === "autumn"
+      : theme === "floral" || theme === "autumn" || theme === "boudoir"
         ? 8
         : theme === "tide"
           ? 6
@@ -987,6 +1034,10 @@ export function drawNameplateBar(
   } else if (theme === "duelist") {
     ctx.strokeStyle = "rgba(160,140,200,0.35)";
     ctx.lineWidth = 0.75;
+    ctx.stroke();
+  } else if (theme === "boudoir") {
+    ctx.strokeStyle = "rgba(214,148,176,0.38)";
+    ctx.lineWidth = 0.8;
     ctx.stroke();
   } else if (theme === "floral") {
     ctx.strokeStyle = "rgba(210,150,175,0.36)";
@@ -1031,6 +1082,8 @@ export function domPreviewShellBackground(layout: CardLayoutJson): string {
       return `linear-gradient(168deg, #564070 0%, ${frame} 38%, #0a0614 72%, #030208 100%)`;
     case "planeswalker":
       return `linear-gradient(158deg, #18120e 0%, ${frame} 48%, #060403 100%)`;
+    case "boudoir":
+      return `linear-gradient(164deg, #1c0d16 0%, #2b1620 26%, ${frame} 50%, #140911 76%, #090407 100%)`;
     case "floral":
       return `linear-gradient(162deg, #1a1016 0%, #26141c 24%, ${frame} 48%, #120a0e 76%, #080406 100%)`;
     case "celestial":
@@ -1055,6 +1108,7 @@ export function domPreviewOuterRingClass(layout: CardLayoutJson): string {
   if (theme === "trainer") return "ring-2 ring-amber-200/45";
   if (theme === "duelist") return "ring-1 ring-violet-300/40";
   if (theme === "planeswalker") return "ring-1 ring-amber-200/30";
+  if (theme === "boudoir") return "ring-1 ring-rose-200/30";
   if (theme === "floral") return "ring-1 ring-rose-200/35";
   if (theme === "celestial") return "ring-1 ring-sky-200/35";
   if (theme === "autumn") return "ring-1 ring-amber-300/35";
@@ -1100,7 +1154,8 @@ export function domPreviewRoundedClass(layout: CardLayoutJson): string {
   const theme = normalizeTcgTheme(layout.tcgTheme);
   if (theme === "trainer") return "rounded-2xl";
   if (theme === "duelist") return "rounded-md";
-  if (theme === "floral" || theme === "autumn") return "rounded-2xl";
+  if (theme === "floral" || theme === "autumn" || theme === "boudoir")
+    return "rounded-2xl";
   if (theme === "neon_city") return "rounded-lg";
   return "rounded-xl";
 }
@@ -1110,7 +1165,12 @@ export function domPreviewArtRoundedClass(layout: CardLayoutJson): string {
   if (theme === "trainer") return "rounded-xl";
   if (theme === "duelist") return "rounded";
   if (theme === "planeswalker") return "rounded-md";
-  if (theme === "floral" || theme === "autumn" || theme === "monoline_ink")
+  if (
+    theme === "floral" ||
+    theme === "autumn" ||
+    theme === "monoline_ink" ||
+    theme === "boudoir"
+  )
     return "rounded-xl";
   if (theme === "celestial" || theme === "tide" || theme === "celestial_clock")
     return "rounded-lg";

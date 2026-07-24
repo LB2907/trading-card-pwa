@@ -1,4 +1,7 @@
 import defaultLayout from "@/lib/default-layout.json";
+import templateBoudoir from "@/lib/templates/boudoir.json";
+import templateGilded from "@/lib/templates/gilded.json";
+import templateObsidian from "@/lib/templates/obsidian.json";
 import templateAutumn from "@/lib/templates/autumn.json";
 import templateCelestial from "@/lib/templates/celestial.json";
 import templateCelestialClock from "@/lib/templates/celestial_clock.json";
@@ -23,6 +26,9 @@ export const BUILTIN_TEMPLATE_IDS_ORDERED: readonly string[] = [
   "tpl_celestial_clock",
   "tpl_neon_city",
   "tpl_monoline_ink",
+  "tpl_boudoir",
+  "tpl_gilded",
+  "tpl_obsidian",
 ];
 
 /** Single source of truth for built-in templates (ids, display names, layouts). */
@@ -32,9 +38,9 @@ export const BUILTIN_TEMPLATES: readonly {
   layout: object;
 }[] = [
   { id: "tpl_default", name: "Skirmish", layout: defaultLayout },
-  { id: "tpl_minimal", name: "Planeswalker", layout: templatePlaneswalker },
-  { id: "tpl_aurora", name: "Trainer", layout: templateTrainer },
-  { id: "tpl_arena", name: "Duelist", layout: templateDuelist },
+  { id: "tpl_minimal", name: "Arcana", layout: templatePlaneswalker },
+  { id: "tpl_aurora", name: "Aurora", layout: templateTrainer },
+  { id: "tpl_arena", name: "Arena", layout: templateDuelist },
   { id: "tpl_floral", name: "Floral", layout: templateFloral },
   { id: "tpl_celestial", name: "Celestial", layout: templateCelestial },
   { id: "tpl_autumn", name: "Autumn", layout: templateAutumn },
@@ -42,6 +48,9 @@ export const BUILTIN_TEMPLATES: readonly {
   { id: "tpl_celestial_clock", name: "Celestial clock", layout: templateCelestialClock },
   { id: "tpl_neon_city", name: "Neon city", layout: templateNeonCity },
   { id: "tpl_monoline_ink", name: "Monoline ink", layout: templateMonolineInk },
+  { id: "tpl_boudoir", name: "Boudoir noir", layout: templateBoudoir },
+  { id: "tpl_gilded", name: "Gilded", layout: templateGilded },
+  { id: "tpl_obsidian", name: "Obsidian", layout: templateObsidian },
 ];
 
 /** Layout JSON for built-in template ids (instant; no DB round-trip). */

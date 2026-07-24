@@ -1,0 +1,16 @@
+{
+  "id": "boudoir",
+  "name": "Boudoir noir",
+  "tcgTheme": "boudoir",
+  "artFlex": 3.27,
+  "frameColor": "#2b1620",
+  "accentColor": "#c98a9e",
+  "artMatColor": "#0d070a",
+  "innerPadding": 13,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 14,
+  "rarityGemSize": 26
+}
