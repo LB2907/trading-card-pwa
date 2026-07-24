@@ -6,9 +6,11 @@ import type { TcgTheme } from "@/lib/tcg-theme-base";
  * enforce that every theme defines every field — a missing theme is a build
  * error, not a silent fallback to the default frame.
  *
- * Not yet consolidated (deeply interleaved stroke color/width/alpha in the
- * canvas hot path): `paintThemedOuterBorder` / `paintThemedArtBezel`. Those are
- * the final consolidation pass.
+ * Intentionally NOT consolidated: the mid-ring branch in
+ * `paintThemedOuterBorder` and the bezel-stroke branch in
+ * `paintThemedArtBezel`. Those compute from dynamic inputs (the layout accent
+ * and the rarity color), so an explicit if/else reads clearer than a
+ * per-theme function would. Only genuinely per-theme *constants* live here.
  */
 export type AbilityPanelStyle = {
   fill: string;
@@ -23,6 +25,10 @@ export type ThemeDescriptor = {
   outerRadius: number;
   /** Inner art-window corner radius. */
   artInnerRadius: number;
+  /** Outer frame border stroke color. */
+  borderColor: string;
+  /** Outer frame border stroke width. */
+  borderWidth: number;
   /** Nameplate bar behind the card name. */
   nameplate: { showBar: boolean; barColor: string };
   /** Card-name text fill. */
@@ -62,6 +68,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   skirmish: {
     outerRadius: 14,
     artInnerRadius: 9,
+    borderColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1.25,
     nameplate: NO_BAR,
     nameColor: DEFAULT_NAME_COLOR,
     nameShadowBlur: DEFAULT_NAME_SHADOW,
@@ -77,6 +85,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   planeswalker: {
     outerRadius: 11,
     artInnerRadius: 6,
+    borderColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1.25,
     nameplate: { showBar: true, barColor: "rgba(0,0,0,0.45)" },
     nameColor: DEFAULT_NAME_COLOR,
     nameShadowBlur: DEFAULT_NAME_SHADOW,
@@ -98,6 +108,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   trainer: {
     outerRadius: 18,
     artInnerRadius: 14,
+    borderColor: "rgba(255,236,170,0.62)",
+    borderWidth: 2.25,
     nameplate: { showBar: true, barColor: "rgba(30,55,90,0.55)" },
     nameColor: DEFAULT_NAME_COLOR,
     nameShadowBlur: DEFAULT_NAME_SHADOW,
@@ -119,6 +131,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   duelist: {
     outerRadius: 5,
     artInnerRadius: 4,
+    borderColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1.25,
     nameplate: { showBar: true, barColor: "rgba(20,10,35,0.5)" },
     nameColor: "#ede9fe",
     nameShadowBlur: 5,
@@ -140,6 +154,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   floral: {
     outerRadius: 15,
     artInnerRadius: 10,
+    borderColor: "rgba(255,232,242,0.22)",
+    borderWidth: 1.4,
     nameplate: { showBar: true, barColor: "rgba(42,24,34,0.62)" },
     nameColor: "#fce7f0",
     nameShadowBlur: 6,
@@ -161,6 +177,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   celestial: {
     outerRadius: 14,
     artInnerRadius: 9,
+    borderColor: "rgba(210,230,255,0.28)",
+    borderWidth: 1.35,
     nameplate: { showBar: true, barColor: "rgba(18,28,52,0.62)" },
     nameColor: "#e8f0ff",
     nameShadowBlur: 7,
@@ -182,6 +200,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   autumn: {
     outerRadius: 14,
     artInnerRadius: 10,
+    borderColor: "rgba(255,215,170,0.26)",
+    borderWidth: 1.35,
     nameplate: { showBar: true, barColor: "rgba(48,26,14,0.62)" },
     nameColor: "#ffe8d4",
     nameShadowBlur: 6,
@@ -203,6 +223,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   tide: {
     outerRadius: 12,
     artInnerRadius: 8,
+    borderColor: "rgba(170,240,252,0.28)",
+    borderWidth: 1.3,
     nameplate: { showBar: true, barColor: "rgba(12,36,48,0.62)" },
     nameColor: "#dff8fc",
     nameShadowBlur: 7,
@@ -224,6 +246,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   celestial_clock: {
     outerRadius: 12,
     artInnerRadius: 7,
+    borderColor: "rgba(215,185,120,0.3)",
+    borderWidth: 1.28,
     nameplate: { showBar: true, barColor: "rgba(28,22,38,0.65)" },
     nameColor: "#f5ecd8",
     nameShadowBlur: 6,
@@ -245,6 +269,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   neon_city: {
     outerRadius: 9,
     artInnerRadius: 6,
+    borderColor: "rgba(120,220,210,0.28)",
+    borderWidth: 1.15,
     nameplate: { showBar: true, barColor: "rgba(8,18,28,0.68)" },
     nameColor: "#ecf8f8",
     nameShadowBlur: 6,
@@ -266,6 +292,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   monoline_ink: {
     outerRadius: 16,
     artInnerRadius: 11,
+    borderColor: "rgba(220,210,200,0.24)",
+    borderWidth: 1.28,
     nameplate: { showBar: true, barColor: "rgba(28,24,20,0.58)" },
     nameColor: "#f2ebe3",
     nameShadowBlur: 6,
@@ -287,6 +315,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   boudoir: {
     outerRadius: 17,
     artInnerRadius: 12,
+    borderColor: "rgba(255,214,228,0.26)",
+    borderWidth: 1.35,
     nameplate: { showBar: true, barColor: "rgba(43,18,30,0.64)" },
     nameColor: "#fbe3ea",
     nameShadowBlur: 6,
@@ -308,6 +338,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   gilded: {
     outerRadius: 8,
     artInnerRadius: 5,
+    borderColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1.25,
     nameplate: NO_BAR,
     nameColor: DEFAULT_NAME_COLOR,
     nameShadowBlur: DEFAULT_NAME_SHADOW,
@@ -323,6 +355,8 @@ export const THEME_DESCRIPTORS: Record<TcgTheme, ThemeDescriptor> = {
   obsidian: {
     outerRadius: 6,
     artInnerRadius: 3,
+    borderColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1.25,
     nameplate: NO_BAR,
     nameColor: DEFAULT_NAME_COLOR,
     nameShadowBlur: DEFAULT_NAME_SHADOW,

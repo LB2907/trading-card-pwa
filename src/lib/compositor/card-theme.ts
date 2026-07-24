@@ -561,42 +561,8 @@ export function paintThemedOuterBorder(
 
   ctx.beginPath();
   pathRoundRect(ctx, 0, 0, width, h, outerR);
-  ctx.strokeStyle =
-    theme === "trainer"
-      ? "rgba(255,236,170,0.62)"
-      : theme === "boudoir"
-        ? "rgba(255,214,228,0.26)"
-        : theme === "floral"
-        ? "rgba(255,232,242,0.22)"
-        : theme === "celestial"
-          ? "rgba(210,230,255,0.28)"
-          : theme === "autumn"
-            ? "rgba(255,215,170,0.26)"
-            : theme === "tide"
-              ? "rgba(170,240,252,0.28)"
-              : theme === "celestial_clock"
-                ? "rgba(215,185,120,0.3)"
-                : theme === "neon_city"
-                  ? "rgba(120,220,210,0.28)"
-                  : theme === "monoline_ink"
-                    ? "rgba(220,210,200,0.24)"
-                    : "rgba(255,255,255,0.14)";
-  ctx.lineWidth =
-    theme === "trainer"
-      ? 2.25
-      : theme === "boudoir"
-        ? 1.35
-        : theme === "floral"
-        ? 1.4
-        : theme === "celestial" || theme === "autumn"
-          ? 1.35
-          : theme === "tide"
-            ? 1.3
-            : theme === "celestial_clock" || theme === "monoline_ink"
-              ? 1.28
-              : theme === "neon_city"
-                ? 1.15
-                : 1.25;
+  ctx.strokeStyle = THEME_DESCRIPTORS[theme].borderColor;
+  ctx.lineWidth = THEME_DESCRIPTORS[theme].borderWidth;
   ctx.stroke();
 
   ctx.beginPath();
