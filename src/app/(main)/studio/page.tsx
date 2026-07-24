@@ -483,7 +483,7 @@ function StudioPageInner() {
                 disabled={busy}
               />
               <p className="text-xs text-muted-foreground">
-                Skirmish, Planeswalker, Trainer, Duelist — preview updates as you edit.
+                Fourteen frames from clean to ornate — the preview updates as you edit.
               </p>
             </div>
 
