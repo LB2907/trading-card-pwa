@@ -15,18 +15,36 @@ import {
 import { OnboardingGate } from "@/components/onboarding-gate";
 import { VaultBlur } from "@/components/vault-blur";
 import { VaultLockGate } from "@/components/vault-lock-gate";
+import { VaultUnlockScreen } from "@/components/vault-unlock-screen";
+import { getSessionKeyBytes, isEncryptionEnabled } from "@/lib/vault/keyring";
 
 const DbCtx = createContext<TradingCardDb | null>(null);
+
+function vaultIsLocked(): boolean {
+  if (typeof window === "undefined") return false;
+  return isEncryptionEnabled() && getSessionKeyBytes() === null;
+}
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<TradingCardDb | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Checked once on mount (server renders unlocked=false HTML; the DB init
+  // effect below only runs client-side anyway). Bumped after a successful unlock.
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
+    if (vaultIsLocked()) {
+      setLocked(true);
+      return;
+    }
     initDatabase()
       .then(setDb)
       .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
-  }, []);
+  }, [locked]);
+
+  if (locked) {
+    return <VaultUnlockScreen onUnlocked={() => setLocked(false)} />;
+  }
 
   if (err) {
     return (
