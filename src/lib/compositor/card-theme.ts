@@ -20,6 +20,7 @@ import {
   type TcgTheme,
   normalizeTcgTheme,
 } from "@/lib/tcg-theme-base";
+import { THEME_DESCRIPTORS } from "@/lib/compositor/theme-descriptors";
 
 export type { TcgTheme } from "@/lib/tcg-theme-base";
 
@@ -819,40 +820,7 @@ export function showHpInNameRow(theme: TcgTheme): boolean {
 export function nameplateStyle(
   theme: TcgTheme,
 ): { showBar: boolean; barColor: string } {
-  if (theme === "planeswalker") {
-    return { showBar: true, barColor: "rgba(0,0,0,0.45)" };
-  }
-  if (theme === "boudoir") {
-    return { showBar: true, barColor: "rgba(43,18,30,0.64)" };
-  }
-  if (theme === "floral") {
-    return { showBar: true, barColor: "rgba(42,24,34,0.62)" };
-  }
-  if (theme === "celestial") {
-    return { showBar: true, barColor: "rgba(18,28,52,0.62)" };
-  }
-  if (theme === "autumn") {
-    return { showBar: true, barColor: "rgba(48,26,14,0.62)" };
-  }
-  if (theme === "tide") {
-    return { showBar: true, barColor: "rgba(12,36,48,0.62)" };
-  }
-  if (theme === "celestial_clock") {
-    return { showBar: true, barColor: "rgba(28,22,38,0.65)" };
-  }
-  if (theme === "neon_city") {
-    return { showBar: true, barColor: "rgba(8,18,28,0.68)" };
-  }
-  if (theme === "monoline_ink") {
-    return { showBar: true, barColor: "rgba(28,24,20,0.58)" };
-  }
-  if (theme === "trainer") {
-    return { showBar: true, barColor: "rgba(30,55,90,0.55)" };
-  }
-  if (theme === "duelist") {
-    return { showBar: true, barColor: "rgba(20,10,35,0.5)" };
-  }
-  return { showBar: false, barColor: "transparent" };
+  return THEME_DESCRIPTORS[theme].nameplate;
 }
 
 export function applyTypeLineFont(
@@ -1117,54 +1085,12 @@ export function drawNameplateBar(
 export function domPreviewShellBackground(layout: CardLayoutJson): string {
   const theme = normalizeTcgTheme(layout.tcgTheme);
   const frame = parseHex(layout.frameColor, "#111015");
-  switch (theme) {
-    case "trainer":
-      return `linear-gradient(168deg, #5c4d28 0%, #9a8230 22%, ${frame} 42%, #121008 78%, #0a0805 100%)`;
-    case "duelist":
-      return `linear-gradient(168deg, #564070 0%, ${frame} 38%, #0a0614 72%, #030208 100%)`;
-    case "planeswalker":
-      return `linear-gradient(158deg, #18120e 0%, ${frame} 48%, #060403 100%)`;
-    case "boudoir":
-      return `linear-gradient(164deg, #1c0d16 0%, #2b1620 26%, ${frame} 50%, #140911 76%, #090407 100%)`;
-    case "gilded":
-      return `linear-gradient(160deg, #241b0c 0%, ${frame} 40%, #100c05 74%, #070503 100%)`;
-    case "obsidian":
-      return `linear-gradient(160deg, #191a1e 0%, ${frame} 40%, #0a0b0d 74%, #050506 100%)`;
-    case "floral":
-      return `linear-gradient(162deg, #1a1016 0%, #26141c 24%, ${frame} 48%, #120a0e 76%, #080406 100%)`;
-    case "celestial":
-      return `linear-gradient(165deg, #0a0e1a 0%, #121a30 32%, ${frame} 52%, #060812 78%, #03050a 100%)`;
-    case "autumn":
-      return `linear-gradient(162deg, #1c0e08 0%, #2a140c 26%, ${frame} 50%, #140a06 74%, #080402 100%)`;
-    case "tide":
-      return `linear-gradient(168deg, #061218 0%, #0c1c28 34%, ${frame} 55%, #040c12 80%, #020608 100%)`;
-    case "celestial_clock":
-      return `linear-gradient(168deg, #0e0a12 0%, #1a1420 34%, ${frame} 55%, #08060c 78%, #030205 100%)`;
-    case "neon_city":
-      return `linear-gradient(168deg, #050810 0%, #0a1420 40%, ${frame} 58%, #040a12 82%, #020308 100%)`;
-    case "monoline_ink":
-      return `linear-gradient(168deg, #12100e 0%, #1c1814 40%, ${frame} 58%, #0c0a08 80%, #060504 100%)`;
-    default:
-      return `linear-gradient(168deg, #1a1d24 0%, ${frame} 38%, #0e0d0c 72%, #050506 100%)`;
-  }
+  return THEME_DESCRIPTORS[theme].shellGradient(frame);
 }
 
 export function domPreviewOuterRingClass(layout: CardLayoutJson): string {
   const theme = normalizeTcgTheme(layout.tcgTheme);
-  if (theme === "trainer") return "ring-2 ring-amber-200/45";
-  if (theme === "duelist") return "ring-1 ring-violet-300/40";
-  if (theme === "planeswalker") return "ring-1 ring-amber-200/30";
-  if (theme === "boudoir") return "ring-1 ring-rose-200/30";
-  if (theme === "gilded") return "ring-1 ring-amber-200/40";
-  if (theme === "obsidian") return "ring-1 ring-slate-200/22";
-  if (theme === "floral") return "ring-1 ring-rose-200/35";
-  if (theme === "celestial") return "ring-1 ring-sky-200/35";
-  if (theme === "autumn") return "ring-1 ring-amber-300/35";
-  if (theme === "tide") return "ring-1 ring-cyan-200/35";
-  if (theme === "celestial_clock") return "ring-1 ring-amber-200/30";
-  if (theme === "neon_city") return "ring-1 ring-teal-300/28";
-  if (theme === "monoline_ink") return "ring-1 ring-stone-300/25";
-  return "ring-1 ring-white/10";
+  return THEME_DESCRIPTORS[theme].outerRingClass;
 }
 
 /** Layered outer glow for DOM preview (matches canvas rarity tiers). */
@@ -1200,28 +1126,10 @@ export function domPreviewRarityExtraShadow(raritySlug: string): string {
 
 export function domPreviewRoundedClass(layout: CardLayoutJson): string {
   const theme = normalizeTcgTheme(layout.tcgTheme);
-  if (theme === "trainer") return "rounded-2xl";
-  if (theme === "duelist") return "rounded-md";
-  if (theme === "floral" || theme === "autumn" || theme === "boudoir")
-    return "rounded-2xl";
-  if (theme === "neon_city") return "rounded-lg";
-  return "rounded-xl";
+  return THEME_DESCRIPTORS[theme].roundedClass;
 }
 
 export function domPreviewArtRoundedClass(layout: CardLayoutJson): string {
   const theme = normalizeTcgTheme(layout.tcgTheme);
-  if (theme === "trainer") return "rounded-xl";
-  if (theme === "duelist") return "rounded";
-  if (theme === "planeswalker") return "rounded-md";
-  if (
-    theme === "floral" ||
-    theme === "autumn" ||
-    theme === "monoline_ink" ||
-    theme === "boudoir"
-  )
-    return "rounded-xl";
-  if (theme === "celestial" || theme === "tide" || theme === "celestial_clock")
-    return "rounded-lg";
-  if (theme === "neon_city") return "rounded-md";
-  return "rounded-lg";
+  return THEME_DESCRIPTORS[theme].artRoundedClass;
 }
