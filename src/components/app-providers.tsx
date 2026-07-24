@@ -37,7 +37,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const locked = useSyncExternalStore(emptySubscribe, vaultIsLocked, () => false);
 
   useEffect(() => {
-    if (locked) return;
+    // Fresh read, not the render value: during hydration the first effect run
+    // can still see the server snapshot (unlocked) while the vault is locked.
+    if (locked || vaultIsLocked()) return;
     initDatabase()
       .then(setDb)
       .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
@@ -47,15 +49,16 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     return <VaultUnlockScreen onUnlocked={rerender} />;
   }
 
-  if (err) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-6 text-red-400">
-        {err}
-      </div>
-    );
-  }
-
+  // A loaded database always wins — err may be a stale artifact of an
+  // init attempt that ran before the vault was unlocked.
   if (!db) {
+    if (err) {
+      return (
+        <div className="flex min-h-screen items-center justify-center p-6 text-red-400">
+          {err}
+        </div>
+      );
+    }
     return (
       <div className="flex min-h-screen items-center justify-center text-zinc-400">
         Loading local database…
