@@ -38,6 +38,7 @@ import {
 } from "@/lib/export-preferences";
 import { buildVaultBackupZip } from "@/lib/vault/build-backup-zip";
 import { VaultRestorePanel } from "@/components/vault-restore-panel";
+import { StorageStatusPanel } from "@/components/storage-status-panel";
 import { createTcgSetWithStarterPack } from "@/lib/sets/create-tcg-set";
 import {
   hasPinConfigured,
@@ -258,6 +259,19 @@ export default function SettingsPage() {
           </Button>
           <Separator className="my-4" />
           <VaultRestorePanel onMessage={setMsg} />
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/80 shadow-sm">
+        <CardHeader>
+          <CardTitle>Storage</CardTitle>
+          <CardDescription>
+            Whether this browser will keep your vault, and how much space it
+            uses. Important on iPhone, where un-persisted data can be evicted.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <StorageStatusPanel />
         </CardContent>
       </Card>
 

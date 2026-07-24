@@ -19,6 +19,7 @@ import { VaultBlur } from "@/components/vault-blur";
 import { VaultLockGate } from "@/components/vault-lock-gate";
 import { VaultUnlockScreen } from "@/components/vault-unlock-screen";
 import { getSessionKeyBytes, isEncryptionEnabled } from "@/lib/vault/keyring";
+import { requestPersistentStorage } from "@/lib/storage-persistence";
 
 const DbCtx = createContext<TradingCardDb | null>(null);
 
@@ -41,7 +42,12 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     // can still see the server snapshot (unlocked) while the vault is locked.
     if (locked || vaultIsLocked()) return;
     initDatabase()
-      .then(setDb)
+      .then((database) => {
+        setDb(database);
+        // Ask the browser to keep this origin's storage — iOS evicts
+        // un-persisted origins, which for this app means losing the vault.
+        void requestPersistentStorage();
+      })
       .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
   }, [locked]);
 
