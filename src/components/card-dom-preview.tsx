@@ -165,6 +165,8 @@ export function CardDomPreview({
                 ? "bg-gradient-to-b from-[#274a78]/95 to-[#1a3050]/90 ring-1 ring-white/10"
                 : theme === "duelist"
                   ? "bg-gradient-to-b from-[#1a0f2e]/95 to-[#10081c]/90 ring-1 ring-violet-400/25"
+                  : theme === "boudoir"
+                    ? "bg-gradient-to-b from-[#33192a]/95 to-[#1d0e18]/90 ring-1 ring-rose-300/25"
                   : theme === "floral"
                     ? "bg-gradient-to-b from-[#3d2230]/95 to-[#26141c]/90 ring-1 ring-rose-300/25"
                     : theme === "celestial"
@@ -189,7 +191,8 @@ export function CardDomPreview({
           theme === "tide" ||
           theme === "celestial_clock" ||
           theme === "neon_city" ||
-          theme === "monoline_ink" ? (
+          theme === "monoline_ink" ||
+          theme === "boudoir" ? (
             <div
               className="h-px w-3 shrink-0 rounded-full"
               style={{ backgroundColor: rv.primary, opacity: 0.85 }}

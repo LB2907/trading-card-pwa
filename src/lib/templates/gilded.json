@@ -1,0 +1,16 @@
+{
+  "id": "gilded",
+  "name": "Gilded",
+  "tcgTheme": "skirmish",
+  "artFlex": 3.24,
+  "frameColor": "#33270f",
+  "accentColor": "#d4af37",
+  "artMatColor": "#0d0b06",
+  "innerPadding": 13,
+  "nameFontSize": 21,
+  "typeFontSize": 14,
+  "bodyFontSize": 14,
+  "flavorFontSize": 13,
+  "statFontSize": 14,
+  "rarityGemSize": 26
+}

@@ -329,7 +329,9 @@ export function drawTradingCard(
       ? "#f8fafc"
       : theme === "duelist"
         ? "#ede9fe"
-        : theme === "floral"
+        : theme === "boudoir"
+          ? "#fbe3ea"
+          : theme === "floral"
           ? "#fce7f0"
           : theme === "celestial"
             ? "#e8f0ff"
@@ -348,7 +350,7 @@ export function drawTradingCard(
   ctx.shadowBlur =
     theme === "duelist"
       ? 5
-      : theme === "floral" || theme === "autumn"
+      : theme === "floral" || theme === "autumn" || theme === "boudoir"
         ? 6
         : theme === "celestial" || theme === "tide"
           ? 7
@@ -424,7 +426,9 @@ export function drawTradingCard(
       ? "rgba(241,245,249,0.88)"
       : theme === "duelist"
         ? "rgba(221,214,255,0.78)"
-        : theme === "floral"
+        : theme === "boudoir"
+          ? "rgba(250,222,234,0.85)"
+          : theme === "floral"
           ? "rgba(252,231,243,0.86)"
           : theme === "celestial"
             ? "rgba(216,228,255,0.84)"
