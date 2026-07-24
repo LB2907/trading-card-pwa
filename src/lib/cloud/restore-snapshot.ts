@@ -1,5 +1,5 @@
+import type { Database } from "sql.js";
 import type { TradingCardDb } from "@/lib/db/client";
-import { getSqlDb, persistDatabase } from "@/lib/db/client";
 import {
   cardInstances,
   cardTemplates,
@@ -50,26 +50,40 @@ function normalizeSnapshot(raw: unknown): CloudSnapshotV1 {
   };
 }
 
-export async function restoreCloudSnapshot(db: TradingCardDb, raw: unknown) {
+/**
+ * Atomically replace local data with the snapshot. Throws (and leaves the DB
+ * untouched) on any failure. Caller is responsible for suspending persistence
+ * around this call and persisting afterwards.
+ */
+export async function restoreCloudSnapshot(
+  db: TradingCardDb,
+  rawDb: Database,
+  raw: unknown,
+) {
   const snap = normalizeSnapshot(raw);
-  const rawDb = getSqlDb();
-  if (!rawDb) throw new Error("Local database is not ready.");
 
   rawDb.run("PRAGMA foreign_keys = OFF;");
-  rawDb.run("DELETE FROM pull_histories;");
-  rawDb.run("DELETE FROM collection_entries;");
-  rawDb.run("DELETE FROM card_instances;");
-  rawDb.run("DELETE FROM pack_definitions;");
-  rawDb.run("DELETE FROM card_templates;");
-  rawDb.run("DELETE FROM tcg_sets;");
-  rawDb.run("PRAGMA foreign_keys = ON;");
+  rawDb.run("BEGIN;");
+  try {
+    rawDb.run("DELETE FROM pull_histories;");
+    rawDb.run("DELETE FROM collection_entries;");
+    rawDb.run("DELETE FROM card_instances;");
+    rawDb.run("DELETE FROM pack_definitions;");
+    rawDb.run("DELETE FROM card_templates;");
+    rawDb.run("DELETE FROM tcg_sets;");
 
-  if (snap.sets.length) await db.insert(tcgSets).values(snap.sets);
-  if (snap.templates.length) await db.insert(cardTemplates).values(snap.templates);
-  if (snap.instances.length) await db.insert(cardInstances).values(snap.instances);
-  if (snap.collection.length) await db.insert(collectionEntries).values(snap.collection);
-  if (snap.packs.length) await db.insert(packDefinitions).values(snap.packs);
-  if (snap.pulls.length) await db.insert(pullHistories).values(snap.pulls);
+    if (snap.sets.length) await db.insert(tcgSets).values(snap.sets);
+    if (snap.templates.length) await db.insert(cardTemplates).values(snap.templates);
+    if (snap.instances.length) await db.insert(cardInstances).values(snap.instances);
+    if (snap.collection.length) await db.insert(collectionEntries).values(snap.collection);
+    if (snap.packs.length) await db.insert(packDefinitions).values(snap.packs);
+    if (snap.pulls.length) await db.insert(pullHistories).values(snap.pulls);
 
-  persistDatabase();
+    rawDb.run("COMMIT;");
+  } catch (e) {
+    rawDb.run("ROLLBACK;");
+    throw e;
+  } finally {
+    rawDb.run("PRAGMA foreign_keys = ON;");
+  }
 }
