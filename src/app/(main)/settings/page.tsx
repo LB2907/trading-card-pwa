@@ -45,9 +45,10 @@ import {
   isVaultEnabled,
   lockSession,
   setBlurBackground,
-  setPin,
   setVaultEnabled,
 } from "@/lib/vault";
+import { VaultEncryptionPanel } from "@/components/vault-encryption-panel";
+import { lockVaultSession } from "@/lib/vault/keyring";
 
 async function reloadSets(db: TradingCardDb): Promise<{ id: string; name: string }[]> {
   const rows = await db.select().from(tcgSets);
@@ -59,8 +60,6 @@ export default function SettingsPage() {
   const persist = usePersistDb();
   const [vault, setVault] = useState(false);
   const [blur, setBlur] = useState(true);
-  const [pin1, setPin1] = useState("");
-  const [pin2, setPin2] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [sets, setSets] = useState<{ id: string; name: string }[]>([]);
   const [renameDraft, setRenameDraft] = useState<Record<string, string>>({});
@@ -266,34 +265,40 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Security & privacy</CardTitle>
           <CardDescription>
-            Vault lock, background blur, and PIN for this browser only.
+            Vault encryption, background blur, and session lock for this browser
+            only.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-3">
-            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-muted/25 px-4 py-3.5 transition-colors hover:bg-muted/40">
-              <div>
-                <span className="text-sm font-medium">Vault lock</span>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Requires a saved PIN before you can turn this on.
-                </p>
-              </div>
-              <input
-                type="checkbox"
-                className="size-4 shrink-0 rounded border-input accent-primary"
-                checked={vault}
-                onChange={(e) => {
-                  const v = e.target.checked;
-                  if (v && !hasPinConfigured()) {
-                    setMsg("Save a PIN below before enabling the vault.");
-                    return;
-                  }
-                  setVault(v);
-                  setVaultEnabled(v);
-                  setMsg(null);
-                }}
-              />
-            </label>
+            {vault ? (
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-muted/25 px-4 py-3.5 transition-colors hover:bg-muted/40">
+                <div>
+                  <span className="text-sm font-medium">
+                    Legacy screen lock (no encryption)
+                  </span>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Hides the app behind a PIN but does not protect stored data.
+                    Replace it with vault encryption below.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="size-4 shrink-0 rounded border-input accent-primary"
+                  checked={vault}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    if (v && !hasPinConfigured()) {
+                      setMsg("A legacy PIN is required to enable the screen lock.");
+                      return;
+                    }
+                    setVault(v);
+                    setVaultEnabled(v);
+                    setMsg(null);
+                  }}
+                />
+              </label>
+            ) : null}
             <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-muted/25 px-4 py-3.5 transition-colors hover:bg-muted/40">
               <span className="text-sm font-medium">Blur when app is in background</span>
               <input
@@ -310,57 +315,7 @@ export default function SettingsPage() {
 
           <Separator />
 
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium">PIN</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Hashed (SHA-256) and stored in localStorage on this device only.
-              </p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="settings-pin-new">New PIN</Label>
-                <Input
-                  id="settings-pin-new"
-                  type="password"
-                  inputMode="numeric"
-                  placeholder="New PIN"
-                  value={pin1}
-                  onChange={(e) => setPin1(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="settings-pin-confirm">Confirm</Label>
-                <Input
-                  id="settings-pin-confirm"
-                  type="password"
-                  inputMode="numeric"
-                  placeholder="Confirm PIN"
-                  value={pin2}
-                  onChange={(e) => setPin2(e.target.value)}
-                />
-              </div>
-            </div>
-            <Button
-              type="button"
-              onClick={async () => {
-                if (pin1.length < 4) {
-                  setMsg("PIN must be at least 4 characters.");
-                  return;
-                }
-                if (pin1 !== pin2) {
-                  setMsg("PINs do not match.");
-                  return;
-                }
-                await setPin(pin1);
-                setPin1("");
-                setPin2("");
-                setMsg("PIN saved.");
-              }}
-            >
-              Save PIN
-            </Button>
-          </div>
+          <VaultEncryptionPanel onMessage={setMsg} />
 
           <Separator />
 
@@ -370,6 +325,7 @@ export default function SettingsPage() {
             className="w-full"
             onClick={() => {
               lockSession();
+              lockVaultSession();
               window.location.reload();
             }}
           >

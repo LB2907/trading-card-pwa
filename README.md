@@ -19,6 +19,12 @@ npm run test
 npm run build
 ```
 
+## Vault encryption
+
+**Settings → Security & privacy → Vault encryption** encrypts the database and all media at rest with AES-256-GCM. The key is derived from your PIN (PBKDF2-SHA256, 310,000 iterations) and held only for the current session — every app start asks for the PIN, and a forgotten PIN makes the vault **unrecoverable**.
+
+What it protects: your data at rest against someone with access to the device or its disk but not the PIN. What it does not protect: an unlocked session (key and decrypted data live in the running app), and backup ZIPs, which are exported **unencrypted** so they can be restored anywhere — store them accordingly.
+
 ## Vault backup (ZIP)
 
 In **Settings → Local vault backup**, download a ZIP containing:
