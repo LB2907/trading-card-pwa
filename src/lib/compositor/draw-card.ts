@@ -32,6 +32,7 @@ import {
   outerRadiusForTheme,
 } from "@/lib/tcg-theme-base";
 import { artPanelMetrics, cardHeightForWidth } from "@/lib/compositor/layout-metrics";
+import { THEME_DESCRIPTORS } from "@/lib/compositor/theme-descriptors";
 
 function intrinsicArtSize(src: CanvasImageSource): { w: number; h: number } {
   if (src instanceof HTMLVideoElement) {
@@ -326,41 +327,9 @@ export function drawTradingCard(
     ctx.globalAlpha = 1;
   }
 
-  ctx.fillStyle =
-    theme === "trainer"
-      ? "#f8fafc"
-      : theme === "duelist"
-        ? "#ede9fe"
-        : theme === "boudoir"
-          ? "#fbe3ea"
-          : theme === "floral"
-          ? "#fce7f0"
-          : theme === "celestial"
-            ? "#e8f0ff"
-            : theme === "autumn"
-              ? "#ffe8d4"
-              : theme === "tide"
-                ? "#dff8fc"
-                : theme === "celestial_clock"
-                  ? "#f5ecd8"
-                  : theme === "neon_city"
-                    ? "#ecf8f8"
-                    : theme === "monoline_ink"
-                      ? "#f2ebe3"
-                      : "#f8fafc";
+  ctx.fillStyle = THEME_DESCRIPTORS[theme].nameColor;
   ctx.shadowColor = "rgba(0,0,0,0.55)";
-  ctx.shadowBlur =
-    theme === "duelist"
-      ? 5
-      : theme === "floral" || theme === "autumn" || theme === "boudoir"
-        ? 6
-        : theme === "celestial" || theme === "tide"
-          ? 7
-          : theme === "neon_city"
-            ? 6
-            : theme === "celestial_clock" || theme === "monoline_ink"
-              ? 6
-              : 8;
+  ctx.shadowBlur = THEME_DESCRIPTORS[theme].nameShadowBlur;
   ctx.shadowOffsetY = 1.5;
   let ny = y + 3;
   for (const line of nameLines) {
@@ -423,28 +392,7 @@ export function drawTradingCard(
 
   y += Math.max(plateH + 4, 3 + nameTextH + 10);
 
-  ctx.fillStyle =
-    theme === "trainer"
-      ? "rgba(241,245,249,0.88)"
-      : theme === "duelist"
-        ? "rgba(221,214,255,0.78)"
-        : theme === "boudoir"
-          ? "rgba(250,222,234,0.85)"
-          : theme === "floral"
-          ? "rgba(252,231,243,0.86)"
-          : theme === "celestial"
-            ? "rgba(216,228,255,0.84)"
-            : theme === "autumn"
-              ? "rgba(255,224,190,0.86)"
-              : theme === "tide"
-                ? "rgba(200,240,248,0.82)"
-                : theme === "celestial_clock"
-                  ? "rgba(235,220,195,0.84)"
-                  : theme === "neon_city"
-                    ? "rgba(210,240,238,0.82)"
-                    : theme === "monoline_ink"
-                      ? "rgba(228,218,208,0.82)"
-                      : "rgba(248,250,252,0.72)";
+  ctx.fillStyle = THEME_DESCRIPTORS[theme].typeColor;
   applyTypeLineFont(ctx, theme, layout.typeFontSize);
   const typeMaxW = Math.max(40, gx - textInsetX - 8);
   const typeLines = wrapText(ctx, instance.typeLine || "", typeMaxW);

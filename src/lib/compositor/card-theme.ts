@@ -828,7 +828,7 @@ export function applyTypeLineFont(
   theme: TcgTheme,
   size: number,
 ): void {
-  if (theme === "trainer") {
+  if (THEME_DESCRIPTORS[theme].typeLineSansItalic) {
     ctx.font = canvasFontSansItalic(600, size);
   } else {
     ctx.font = canvasFontSerifItalic(500, size);
@@ -842,104 +842,7 @@ export function abilityPanelStyle(theme: TcgTheme): {
   stroke: string;
   innerHighlight: string;
 } {
-  switch (theme) {
-    case "planeswalker":
-      return {
-        fill: "rgba(12,9,7,0.88)",
-        fillTop: "rgba(42,32,24,0.55)",
-        fillBottom: "rgba(4,3,2,0.92)",
-        stroke: "rgba(200,170,120,0.38)",
-        innerHighlight: "rgba(255,220,170,0.12)",
-      };
-    case "trainer":
-      return {
-        fill: "rgba(252,252,253,0.97)",
-        fillTop: "rgba(255,255,255,0.99)",
-        fillBottom: "rgba(226,232,240,0.88)",
-        stroke: "rgba(51,65,107,0.32)",
-        innerHighlight: "rgba(255,255,255,0.85)",
-      };
-    case "duelist":
-      return {
-        fill: "rgba(8,4,18,0.94)",
-        fillTop: "rgba(36,22,58,0.65)",
-        fillBottom: "rgba(3,1,8,0.96)",
-        stroke: "rgba(175,155,220,0.42)",
-        innerHighlight: "rgba(200,180,255,0.1)",
-      };
-    case "boudoir":
-      return {
-        fill: "rgba(14,6,10,0.9)",
-        fillTop: "rgba(56,28,42,0.58)",
-        fillBottom: "rgba(5,2,4,0.94)",
-        stroke: "rgba(216,158,184,0.38)",
-        innerHighlight: "rgba(255,222,236,0.11)",
-      };
-    case "floral":
-      return {
-        fill: "rgba(16,8,12,0.9)",
-        fillTop: "rgba(52,32,44,0.58)",
-        fillBottom: "rgba(6,2,5,0.94)",
-        stroke: "rgba(214,165,188,0.38)",
-        innerHighlight: "rgba(255,228,240,0.11)",
-      };
-    case "celestial":
-      return {
-        fill: "rgba(8,12,24,0.9)",
-        fillTop: "rgba(28,40,72,0.55)",
-        fillBottom: "rgba(4,6,14,0.94)",
-        stroke: "rgba(150,190,255,0.35)",
-        innerHighlight: "rgba(220,235,255,0.1)",
-      };
-    case "autumn":
-      return {
-        fill: "rgba(24,12,6,0.9)",
-        fillTop: "rgba(72,38,18,0.55)",
-        fillBottom: "rgba(12,5,2,0.94)",
-        stroke: "rgba(220,150,80,0.36)",
-        innerHighlight: "rgba(255,210,160,0.1)",
-      };
-    case "tide":
-      return {
-        fill: "rgba(6,16,22,0.9)",
-        fillTop: "rgba(22,58,72,0.55)",
-        fillBottom: "rgba(2,8,12,0.94)",
-        stroke: "rgba(100,200,215,0.34)",
-        innerHighlight: "rgba(200,245,255,0.1)",
-      };
-    case "celestial_clock":
-      return {
-        fill: "rgba(14,10,18,0.9)",
-        fillTop: "rgba(48,38,28,0.52)",
-        fillBottom: "rgba(6,4,8,0.94)",
-        stroke: "rgba(200,170,110,0.34)",
-        innerHighlight: "rgba(255,230,190,0.09)",
-      };
-    case "neon_city":
-      return {
-        fill: "rgba(6,10,18,0.92)",
-        fillTop: "rgba(18,48,52,0.5)",
-        fillBottom: "rgba(2,4,10,0.96)",
-        stroke: "rgba(78,200,195,0.28)",
-        innerHighlight: "rgba(200,245,240,0.07)",
-      };
-    case "monoline_ink":
-      return {
-        fill: "rgba(18,15,12,0.88)",
-        fillTop: "rgba(42,36,30,0.48)",
-        fillBottom: "rgba(8,6,5,0.92)",
-        stroke: "rgba(200,190,180,0.3)",
-        innerHighlight: "rgba(235,228,218,0.08)",
-      };
-    default:
-      return {
-        fill: "rgba(6,8,12,0.72)",
-        fillTop: "rgba(28,32,42,0.55)",
-        fillBottom: "rgba(2,3,6,0.88)",
-        stroke: "rgba(255,255,255,0.16)",
-        innerHighlight: "rgba(255,255,255,0.08)",
-      };
-  }
+  return THEME_DESCRIPTORS[theme].abilityPanel;
 }
 
 export function abilityTextColor(theme: TcgTheme): string {
