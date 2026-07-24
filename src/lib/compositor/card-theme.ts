@@ -4,6 +4,8 @@ import { paintAutumnBackdropMotifs } from "@/lib/compositor/autumn-motifs";
 import { paintCelestialBackdropMotifs } from "@/lib/compositor/celestial-motifs";
 import { paintCelestialClockBackdropMotifs } from "@/lib/compositor/celestial-clock-motifs";
 import { paintBoudoirBackdropMotifs } from "@/lib/compositor/boudoir-motifs";
+import { paintGildedBackdropMotifs } from "@/lib/compositor/gilded-motifs";
+import { paintObsidianBackdropMotifs } from "@/lib/compositor/obsidian-motifs";
 import { paintFloralBackdropMotifs } from "@/lib/compositor/floral-motifs";
 import { paintMonolineInkBackdropMotifs } from "@/lib/compositor/monoline-ink-motifs";
 import { paintNeonCityBackdropMotifs } from "@/lib/compositor/neon-city-motifs";
@@ -438,6 +440,46 @@ export function paintThemedBackdrop(
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, width, h);
       paintBoudoirBackdropMotifs(ctx, width, h, artTop, artH, accent);
+      break;
+    }
+    case "gilded": {
+      const g = ctx.createLinearGradient(0, 0, width * 0.6, h * 1.04);
+      g.addColorStop(0, "#241b0c");
+      g.addColorStop(0.34, frame);
+      g.addColorStop(0.74, "#100c05");
+      g.addColorStop(1, "#070503");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const warm = ctx.createRadialGradient(
+        width * 0.5, -h * 0.05, 0,
+        width * 0.5, h * 0.2, width * 0.7,
+      );
+      warm.addColorStop(0, "rgba(212,175,55,0.14)");
+      warm.addColorStop(0.5, "rgba(180,140,40,0.05)");
+      warm.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = warm;
+      ctx.fillRect(0, 0, width, h);
+      paintGildedBackdropMotifs(ctx, width, h, artTop, artH, accent);
+      break;
+    }
+    case "obsidian": {
+      const g = ctx.createLinearGradient(0, 0, width * 0.5, h * 1.05);
+      g.addColorStop(0, "#191a1e");
+      g.addColorStop(0.34, frame);
+      g.addColorStop(0.72, "#0a0b0d");
+      g.addColorStop(1, "#050506");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, width, h);
+      const cool = ctx.createRadialGradient(
+        width * 0.72, h * 0.2, 0,
+        width * 0.6, h * 0.3, width * 0.7,
+      );
+      cool.addColorStop(0, "rgba(174,182,194,0.1)");
+      cool.addColorStop(0.5, "rgba(120,130,150,0.035)");
+      cool.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = cool;
+      ctx.fillRect(0, 0, width, h);
+      paintObsidianBackdropMotifs(ctx, width, h, artTop, artH, accent);
       break;
     }
     default: {
@@ -1084,6 +1126,10 @@ export function domPreviewShellBackground(layout: CardLayoutJson): string {
       return `linear-gradient(158deg, #18120e 0%, ${frame} 48%, #060403 100%)`;
     case "boudoir":
       return `linear-gradient(164deg, #1c0d16 0%, #2b1620 26%, ${frame} 50%, #140911 76%, #090407 100%)`;
+    case "gilded":
+      return `linear-gradient(160deg, #241b0c 0%, ${frame} 40%, #100c05 74%, #070503 100%)`;
+    case "obsidian":
+      return `linear-gradient(160deg, #191a1e 0%, ${frame} 40%, #0a0b0d 74%, #050506 100%)`;
     case "floral":
       return `linear-gradient(162deg, #1a1016 0%, #26141c 24%, ${frame} 48%, #120a0e 76%, #080406 100%)`;
     case "celestial":
@@ -1109,6 +1155,8 @@ export function domPreviewOuterRingClass(layout: CardLayoutJson): string {
   if (theme === "duelist") return "ring-1 ring-violet-300/40";
   if (theme === "planeswalker") return "ring-1 ring-amber-200/30";
   if (theme === "boudoir") return "ring-1 ring-rose-200/30";
+  if (theme === "gilded") return "ring-1 ring-amber-200/40";
+  if (theme === "obsidian") return "ring-1 ring-slate-200/22";
   if (theme === "floral") return "ring-1 ring-rose-200/35";
   if (theme === "celestial") return "ring-1 ring-sky-200/35";
   if (theme === "autumn") return "ring-1 ring-amber-300/35";

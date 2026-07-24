@@ -10,7 +10,9 @@ export type TcgTheme =
   | "celestial_clock"
   | "neon_city"
   | "monoline_ink"
-  | "boudoir";
+  | "boudoir"
+  | "gilded"
+  | "obsidian";
 
 export function normalizeTcgTheme(raw: unknown): TcgTheme {
   const t = typeof raw === "string" ? raw.toLowerCase() : "";
@@ -26,7 +28,9 @@ export function normalizeTcgTheme(raw: unknown): TcgTheme {
     t === "celestial_clock" ||
     t === "neon_city" ||
     t === "monoline_ink" ||
-    t === "boudoir"
+    t === "boudoir" ||
+    t === "gilded" ||
+    t === "obsidian"
   ) {
     return t;
   }
@@ -57,6 +61,10 @@ export function outerRadiusForTheme(theme: TcgTheme): number {
       return 16;
     case "boudoir":
       return 17;
+    case "gilded":
+      return 8;
+    case "obsidian":
+      return 6;
     default:
       return 14;
   }
@@ -86,6 +94,10 @@ export function artInnerRadiusForTheme(theme: TcgTheme): number {
       return 11;
     case "boudoir":
       return 12;
+    case "gilded":
+      return 5;
+    case "obsidian":
+      return 3;
     default:
       return 9;
   }
