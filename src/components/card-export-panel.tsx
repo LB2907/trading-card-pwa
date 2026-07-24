@@ -131,10 +131,15 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
             tabIndex={-1}
           >
             <CardHeader>
-              <CardTitle id="card-export-dialog-title">Leave this device?</CardTitle>
+              <CardTitle
+                id="card-export-dialog-title"
+                className="font-[family-name:var(--font-display)] text-xl"
+              >
+                Export card
+              </CardTitle>
               <CardDescription>
-                Downloads and the system share sheet send bytes off this page.
-                Your host never sees them, but any app you share to might.
+                Full card at 1680&thinsp;px wide — sharp on screens and
+                print-ready at 2.5&Prime;&nbsp;×&nbsp;3.5&Prime;.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -161,13 +166,13 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
               </div>
 
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Full card (frame + text + art)
+                <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  Full card · frame + text + art
                 </p>
                 <Button
                   type="button"
-                  variant="secondary"
                   className="w-full"
+                  size="lg"
                   disabled={busy}
                   onClick={() =>
                     void run("PNG download", () =>
@@ -175,49 +180,49 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                     )
                   }
                 >
-                  PNG (still)
+                  Download PNG
                 </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full"
-                  disabled={busy}
-                  onClick={() =>
-                    void run("JPEG download", () =>
-                      downloadCompositedCardJpeg(row, compositedOpts),
-                    )
-                  }
-                >
-                  JPEG (still)
-                </Button>
-                {webpOk ? (
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     type="button"
                     variant="secondary"
-                    className="w-full"
                     disabled={busy}
                     onClick={() =>
-                      void run("WebP download", () =>
-                        downloadCompositedCardWebp(row, compositedOpts),
+                      void run("JPEG download", () =>
+                        downloadCompositedCardJpeg(row, compositedOpts),
                       )
                     }
                   >
-                    WebP (still)
+                    JPEG
                   </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full"
-                  disabled={busy}
-                  onClick={() =>
-                    void run("GIF download", () =>
-                      downloadCompositedCardGif(row, compositedOpts),
-                    )
-                  }
-                >
-                  GIF {kind === "gif" ? "(animated)" : "(still, one frame)"}
-                </Button>
+                  {webpOk ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        void run("WebP download", () =>
+                          downloadCompositedCardWebp(row, compositedOpts),
+                        )
+                      }
+                    >
+                      WebP
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className={webpOk ? "" : "col-span-1"}
+                    disabled={busy}
+                    onClick={() =>
+                      void run("GIF download", () =>
+                        downloadCompositedCardGif(row, compositedOpts),
+                      )
+                    }
+                  >
+                    GIF{kind === "gif" ? " · animated" : " · still"}
+                  </Button>
+                </div>
                 {artIsVideo && videoFmt ? (
                   <Button
                     type="button"
@@ -248,6 +253,9 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                   supported, WebM on many desktops).
                 </p>
 
+                <p className="pt-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  Original media
+                </p>
                 {showOriginalDownload && (
                   <Button
                     type="button"
@@ -273,7 +281,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full border-violet-500/40 text-violet-200 hover:bg-violet-950/40 hover:text-violet-100"
+                      className="w-full border-[var(--tc-accent)]/40 text-[var(--tc-accent-hover)] hover:bg-[color-mix(in_srgb,var(--tc-accent)_12%,transparent)] hover:text-[var(--tc-accent-hover)]"
                       disabled={busy}
                       onClick={() =>
                         void (async () => {
@@ -306,7 +314,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full border-violet-500/40 text-violet-200 hover:bg-violet-950/40 hover:text-violet-100"
+                        className="w-full border-[var(--tc-accent)]/40 text-[var(--tc-accent-hover)] hover:bg-[color-mix(in_srgb,var(--tc-accent)_12%,transparent)] hover:text-[var(--tc-accent-hover)]"
                         disabled={busy}
                         onClick={() =>
                           void (async () => {
@@ -357,7 +365,11 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                 </p>
               ) : null}
             </CardContent>
-            <CardFooter className="justify-end border-t border-border/60 pt-6">
+            <CardFooter className="items-center justify-between gap-3 border-t border-border/60 pt-6">
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                Exports leave this device. Your host never sees them; apps you
+                share to might.
+              </p>
               <Button
                 type="button"
                 variant="ghost"

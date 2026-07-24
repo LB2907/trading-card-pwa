@@ -7,6 +7,7 @@ import {
   previewPixelRatio,
 } from "@/lib/compositor/card-resolution";
 import { domPreviewRarityExtraShadow } from "@/lib/compositor/card-theme";
+import { ensureCardFontsLoaded } from "@/lib/compositor/canvas-font";
 import { cardCanvasSize, drawTradingCard } from "@/lib/compositor/draw-card";
 import type { CardInstance } from "@/lib/db/schema";
 import { loadArtForCompositor } from "@/lib/media/compositor-source";
@@ -28,6 +29,7 @@ export function CardCanvasPreview({
       if (!blob || cancelled) return;
       const { source, dispose } = await loadArtForCompositor(blob, instance);
       try {
+        await ensureCardFontsLoaded();
         const layout = parseLayout(layoutJson);
         const canvas = document.createElement("canvas");
         const w = CARD_LAYOUT_WIDTH;

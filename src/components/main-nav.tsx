@@ -34,9 +34,9 @@ export function MainNav() {
             key={n.href}
             href={n.href}
             aria-current={active ? "page" : undefined}
-            className={`flex min-h-12 min-w-[4.5rem] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tc-accent)] ${
+            className={`relative flex min-h-12 min-w-[4.5rem] flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--tc-accent)] ${
               active
-                ? "bg-[var(--tc-surface-muted)] text-[var(--tc-accent)]"
+                ? "bg-[var(--tc-surface-muted)] text-[var(--tc-accent)] before:absolute before:-top-[7px] before:left-1/2 before:h-0.5 before:w-8 before:-translate-x-1/2 before:rounded-full before:bg-[var(--tc-accent)] before:content-['']"
                 : "text-[var(--tc-text-muted)] hover:bg-[var(--tc-surface-hover)] hover:text-[var(--tc-accent-hover)]"
             }`}
           >

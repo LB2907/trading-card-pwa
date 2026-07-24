@@ -19,7 +19,11 @@ import {
   showHpInNameRow,
   trainerHpBadgeWidth,
 } from "@/lib/compositor/card-theme";
-import { canvasFontSans } from "@/lib/compositor/canvas-font";
+import {
+  canvasFontDisplay,
+  canvasFontSans,
+  ensureCardFontsLoaded,
+} from "@/lib/compositor/canvas-font";
 import {
   artInnerRadiusForTheme,
   normalizeTcgTheme,
@@ -285,7 +289,7 @@ export function drawTradingCard(
   const textInsetX = pad + (nameplate.showBar ? 12 : 10);
   const gx = width - pad - layout.rarityGemSize;
 
-  ctx.font = canvasFontSans(800, layout.nameFontSize);
+  ctx.font = canvasFontDisplay(700, layout.nameFontSize);
   ctx.textBaseline = "top";
 
   let nameRight = gx - 8;
@@ -656,11 +660,12 @@ export function cardCanvasSize(width: number, pixelRatio: number) {
 }
 
 /** Raster export (PNG / JPEG / WebP). */
-export function exportCardAsBlob(
+export async function exportCardAsBlob(
   opt: DrawCardOptions,
   mime: "image/png" | "image/jpeg" | "image/webp",
   quality = 0.92,
 ): Promise<Blob> {
+  await ensureCardFontsLoaded();
   const pr =
     Number.isFinite(opt.pixelRatio) && opt.pixelRatio > 0 ? opt.pixelRatio : 1;
   const { bufW, bufH, cssW } = cardCanvasSize(opt.width, pr);

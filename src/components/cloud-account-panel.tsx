@@ -241,7 +241,7 @@ export function CloudAccountPanel() {
         <p className="text-xs tabular-nums text-[var(--tc-text-secondary)]">Last checked: {lastCloud}</p>
       ) : null}
       {msg ? (
-        <p className="rounded-lg border border-violet-900/35 bg-violet-950/25 px-3 py-2 text-sm text-violet-200/95">
+        <p className="rounded-lg border border-[var(--tc-accent)]/25 bg-[color-mix(in_srgb,var(--tc-accent)_8%,transparent)] px-3 py-2 text-sm text-[var(--tc-accent-hover)]">
           {msg}
         </p>
       ) : null}

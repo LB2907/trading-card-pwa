@@ -143,7 +143,7 @@ export default function BulkStudioPage() {
     <div className="mx-auto w-full max-w-2xl space-y-6 pb-12">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Bulk create</h1>
+          <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-foreground">Bulk create</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
             Upload multiple images, GIFs, or videos. Each file becomes one card with the shared
             fields below. Names default to the file name.

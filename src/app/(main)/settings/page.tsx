@@ -187,7 +187,7 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-10 pb-16">
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
           Cloud backup, security, exports, and TCG sets on this device.
         </p>

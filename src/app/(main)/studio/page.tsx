@@ -377,7 +377,7 @@ function StudioPageInner() {
     <div className="mx-auto w-full pb-12">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-foreground">
             {editingId ? "Edit card" : "Studio"}
           </h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">

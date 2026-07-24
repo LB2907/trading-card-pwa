@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Private, local-first trading cards from your images, GIFs, and video frames.",
     start_url: "/",
     display: "standalone",
-    background_color: "#0a0a0a",
-    theme_color: "#6b4ee6",
+    background_color: "#0c0a09",
+    theme_color: "#0c0a09",
     orientation: "portrait-primary",
     icons: [
       {

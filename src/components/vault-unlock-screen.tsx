@@ -51,7 +51,7 @@ export function VaultUnlockScreen({ onUnlocked }: { onUnlocked: () => void }) {
       <button
         type="button"
         disabled={busy}
-        className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+        className="rounded-lg bg-[var(--tc-btn-primary-bg)] px-4 py-2 text-sm font-medium text-[#14100b] hover:bg-[var(--tc-btn-primary-hover)] disabled:opacity-60"
         onClick={() => void tryUnlock()}
       >
         {busy ? "Unlocking…" : "Unlock"}

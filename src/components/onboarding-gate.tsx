@@ -20,7 +20,10 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
   if (!done) {
     return (
       <div className="flex min-h-screen flex-col justify-center gap-6 bg-zinc-950 px-6 py-12 text-zinc-100">
-        <h1 className="text-2xl font-bold tracking-tight">
+        <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[var(--tc-accent)]">
+          Private · Local · Yours
+        </p>
+        <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold tracking-tight text-[var(--tc-text-primary)]">
           Trading Card Studio
         </h1>
         <p className="max-w-lg text-zinc-300">
@@ -34,7 +37,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
         </p>
         <button
           type="button"
-          className="w-fit rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white hover:bg-violet-500"
+          className="w-fit rounded-xl bg-[var(--tc-btn-primary-bg)] px-5 py-3 text-sm font-semibold text-[#14100b] hover:bg-[var(--tc-btn-primary-hover)]"
           onClick={() => {
             setOnboardingDone();
             setAccepted(true);

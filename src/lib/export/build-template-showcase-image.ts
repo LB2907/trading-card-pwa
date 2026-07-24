@@ -1,5 +1,6 @@
 "use client";
 
+import { ensureCardFontsLoaded } from "@/lib/compositor/canvas-font";
 import { parseLayout } from "@/lib/card-layout";
 import {
   cardCanvasSize,
@@ -122,6 +123,7 @@ function sheetToPngBlob(sheet: HTMLCanvasElement): Promise<Blob> {
  * (name, type line, rules, flavor) and neutral art — for sharing layout options.
  */
 export async function buildTemplateShowcasePngBlob(): Promise<Blob> {
+  await ensureCardFontsLoaded();
   const art = neutralArtPlaceholder();
   const instance = showcasePlaceholderInstance();
   const cardW = CARD_LAYOUT_WIDTH;
