@@ -7,6 +7,7 @@ import * as schema from "./schema";
 import { INIT_SQL } from "./init-sql";
 import { runSqliteMigrations } from "./migrate";
 import { loadSqliteBlob, saveSqliteBlob } from "./idb";
+import { createPersistence, type Persistence } from "./persistence";
 import defaultLayout from "@/lib/default-layout.json";
 import templateAutumn from "@/lib/templates/autumn.json";
 import templateCelestial from "@/lib/templates/celestial.json";
@@ -109,16 +110,15 @@ async function syncBuiltinTemplateLayouts(db: TradingCardDb) {
   persistDatabase();
 }
 
-let persistTimer: ReturnType<typeof setTimeout> | null = null;
+let persistence: Persistence | null = null;
 
 export function persistDatabase() {
-  if (!sqlDb) return;
-  if (persistTimer) clearTimeout(persistTimer);
-  persistTimer = setTimeout(() => {
-    persistTimer = null;
-    const data = sqlDb!.export();
-    void saveSqliteBlob(data);
-  }, 300);
+  persistence?.markDirty();
+}
+
+/** Suspend/resume/flush access for restore flows. Null before initDatabase. */
+export function getPersistence(): Persistence | null {
+  return persistence;
 }
 
 export async function initDatabase(): Promise<TradingCardDb> {
@@ -133,6 +133,10 @@ export async function initDatabase(): Promise<TradingCardDb> {
     ? new SQL.Database(existing)
     : new SQL.Database();
   sqlDb = raw;
+  persistence = createPersistence({
+    exportFn: () => raw.export(),
+    saveFn: (data) => saveSqliteBlob(data),
+  });
 
   raw.run(INIT_SQL);
   runSqliteMigrations(raw);
@@ -144,10 +148,10 @@ export async function initDatabase(): Promise<TradingCardDb> {
 
   if (typeof window !== "undefined") {
     window.addEventListener("beforeunload", () => {
-      if (sqlDb) void saveSqliteBlob(sqlDb.export());
+      if (persistence?.isDirty() && sqlDb) void saveSqliteBlob(sqlDb.export());
     });
     setInterval(() => {
-      if (sqlDb) void saveSqliteBlob(sqlDb.export());
+      void persistence?.intervalTick();
     }, 8000);
   }
 
