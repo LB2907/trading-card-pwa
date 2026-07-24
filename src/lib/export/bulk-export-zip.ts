@@ -1,4 +1,4 @@
-import { zipSync } from "fflate";
+import { zip } from "fflate";
 import type { CardExportRow } from "@/lib/export/types";
 import {
   getCompositedCardGifBlob,
@@ -23,6 +23,22 @@ export type BulkExportKind =
 
 async function blobToU8(blob: Blob): Promise<Uint8Array> {
   return new Uint8Array(await blob.arrayBuffer());
+}
+
+/** Compress off the main thread (fflate spins its own workers) so a large
+ * bulk export never freezes the UI during zipping. */
+function zipAsync(files: Record<string, Uint8Array>): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    zip(files, { level: 6 }, (err, data) => {
+      if (err) reject(err);
+      else resolve(data);
+    });
+  });
+}
+
+/** Let the browser paint / handle input between heavy card renders. */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((r) => setTimeout(r, 0));
 }
 
 export async function buildBulkExportZip(
@@ -107,16 +123,18 @@ export async function buildBulkExportZip(
       doneJobs++;
       opts?.onProgress?.(doneJobs, totalJobs);
     }
+    // Yield after each card so the progress UI updates and input stays
+    // responsive instead of the whole batch janking the main thread.
+    await yieldToEventLoop();
   }
 
   const entryCount = Object.keys(files).length;
   if (entryCount === 0) {
     return { blob: new Blob(), entryCount: 0 };
   }
-  const zipped = zipSync(files, { level: 6 });
-  const zipBytes = new Uint8Array(zipped);
+  const zipBytes = await zipAsync(files);
   return {
-    blob: new Blob([zipBytes], { type: "application/zip" }),
+    blob: new Blob([new Uint8Array(zipBytes)], { type: "application/zip" }),
     entryCount,
   };
 }
