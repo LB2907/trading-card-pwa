@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS card_templates (
   id TEXT PRIMARY KEY NOT NULL,
   name TEXT NOT NULL,
   layout_json TEXT NOT NULL,
+  origin TEXT NOT NULL DEFAULT 'builtin',
   created_at INTEGER NOT NULL
 );
 

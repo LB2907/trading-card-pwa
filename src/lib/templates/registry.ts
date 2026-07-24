@@ -25,20 +25,29 @@ export const BUILTIN_TEMPLATE_IDS_ORDERED: readonly string[] = [
   "tpl_monoline_ink",
 ];
 
+/** Single source of truth for built-in templates (ids, display names, layouts). */
+export const BUILTIN_TEMPLATES: readonly {
+  id: string;
+  name: string;
+  layout: object;
+}[] = [
+  { id: "tpl_default", name: "Skirmish", layout: defaultLayout },
+  { id: "tpl_minimal", name: "Planeswalker", layout: templatePlaneswalker },
+  { id: "tpl_aurora", name: "Trainer", layout: templateTrainer },
+  { id: "tpl_arena", name: "Duelist", layout: templateDuelist },
+  { id: "tpl_floral", name: "Floral", layout: templateFloral },
+  { id: "tpl_celestial", name: "Celestial", layout: templateCelestial },
+  { id: "tpl_autumn", name: "Autumn", layout: templateAutumn },
+  { id: "tpl_tide", name: "Tide", layout: templateTide },
+  { id: "tpl_celestial_clock", name: "Celestial clock", layout: templateCelestialClock },
+  { id: "tpl_neon_city", name: "Neon city", layout: templateNeonCity },
+  { id: "tpl_monoline_ink", name: "Monoline ink", layout: templateMonolineInk },
+];
+
 /** Layout JSON for built-in template ids (instant; no DB round-trip). */
-const BUILTIN_LAYOUT_JSON: Record<string, string> = {
-  tpl_default: JSON.stringify(defaultLayout),
-  tpl_minimal: JSON.stringify(templatePlaneswalker),
-  tpl_aurora: JSON.stringify(templateTrainer),
-  tpl_arena: JSON.stringify(templateDuelist),
-  tpl_floral: JSON.stringify(templateFloral),
-  tpl_celestial: JSON.stringify(templateCelestial),
-  tpl_autumn: JSON.stringify(templateAutumn),
-  tpl_tide: JSON.stringify(templateTide),
-  tpl_celestial_clock: JSON.stringify(templateCelestialClock),
-  tpl_neon_city: JSON.stringify(templateNeonCity),
-  tpl_monoline_ink: JSON.stringify(templateMonolineInk),
-};
+const BUILTIN_LAYOUT_JSON: Record<string, string> = Object.fromEntries(
+  BUILTIN_TEMPLATES.map((t) => [t.id, JSON.stringify(t.layout)]),
+);
 
 export function layoutJsonForBuiltinTemplateId(id: string): string | null {
   return BUILTIN_LAYOUT_JSON[id] ?? null;
