@@ -10,4 +10,6 @@ export type CardExportRow = {
 export type CardExportOptions = {
   /** When true, skip painting the user-configured export watermark. */
   omitWatermark?: boolean;
+  /** Override the still-image export pixel ratio (resolution preset). */
+  pixelRatio?: number;
 };

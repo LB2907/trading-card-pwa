@@ -527,8 +527,11 @@ export function drawTradingCard(
   const bottomMargin = 10;
   const roomToBottom = () => h - pad - y - bottomMargin;
   const flavorLineH = layout.flavorFontSize * 1.35;
-  const flavorHeadroom = instance.flavorText
-    ? Math.min(8 * flavorLineH, Math.max(0, roomToBottom() * 0.55))
+  // Ability (rules) is functional and wins the space fight; flavor is
+  // decorative and gets a modest reservation (≤ 3 lines / 35% of room) so it
+  // can never starve the ability into an empty panel.
+  const flavorReserve = instance.flavorText
+    ? Math.min(3 * flavorLineH, Math.max(0, roomToBottom() * 0.35))
     : 0;
 
   if (instance.abilityText?.trim()) {
@@ -541,59 +544,63 @@ export function drawTradingCard(
     const lineH = layout.bodyFontSize * 1.3;
     const panelPad = 9;
     const rawRoom = roomToBottom();
-    const abilityBudget = Math.min(
-      rawRoom,
-      Math.max(36, rawRoom - flavorHeadroom),
-    );
-    const maxInner = Math.max(10, abilityBudget - panelPad * 2);
+    const abilityBudget = Math.max(0, rawRoom - flavorReserve);
+    const maxInner = abilityBudget - panelPad * 2;
     const abLines: string[] = [];
     let innerH = 0;
-    for (const line of ab) {
-      const step = line === "" ? lineH * 0.55 : lineH;
-      if (innerH + step > maxInner) break;
-      abLines.push(line);
-      innerH += step;
-    }
-    const innerTextH = wrappedLinesHeight(abLines, lineH);
-    const panelH = Math.min(
-      abilityBudget,
-      Math.max(36, innerTextH + panelPad * 2),
-    );
-    const ap = abilityPanelStyle(theme);
-    const panelR = 12;
-    ctx.beginPath();
-    pathRoundRect(ctx, pad, y, width - pad * 2, panelH, panelR);
-    const panelGrad = ctx.createLinearGradient(pad, y, pad, y + panelH);
-    panelGrad.addColorStop(0, ap.fillTop);
-    panelGrad.addColorStop(0.55, ap.fill);
-    panelGrad.addColorStop(1, ap.fillBottom);
-    ctx.fillStyle = panelGrad;
-    ctx.fill();
-    ctx.strokeStyle = ap.stroke;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.beginPath();
-    pathRoundRect(ctx, pad + 0.5, y + 0.5, width - pad * 2 - 1, panelH - 1, panelR - 0.5);
-    ctx.strokeStyle = ap.innerHighlight;
-    ctx.lineWidth = 0.75;
-    ctx.stroke();
-    ctx.save();
-    ctx.beginPath();
-    pathRoundRect(ctx, pad, y, width - pad * 2, panelH, 10);
-    ctx.clip();
-    ctx.fillStyle = abilityTextColor(theme);
-    ctx.font = canvasFontSans(500, layout.bodyFontSize);
-    let ty = y + panelPad;
-    for (const line of abLines) {
-      if (line === "") {
-        ty += lineH * 0.55;
-        continue;
+    if (maxInner >= lineH) {
+      for (const line of ab) {
+        const step = line === "" ? lineH * 0.55 : lineH;
+        if (innerH + step > maxInner) break;
+        abLines.push(line);
+        innerH += step;
       }
-      ctx.fillText(line, textInsetX, ty);
-      ty += lineH;
     }
-    ctx.restore();
-    y += panelH + 10;
+    // Only draw the panel when at least one line fits — never an empty box.
+    if (abLines.length > 0) {
+      const innerTextH = wrappedLinesHeight(abLines, lineH);
+      const panelH = Math.min(
+        abilityBudget,
+        innerTextH + panelPad * 2,
+      );
+      const ap = abilityPanelStyle(theme);
+      const panelR = 12;
+      ctx.beginPath();
+      pathRoundRect(ctx, pad, y, width - pad * 2, panelH, panelR);
+      const panelGrad = ctx.createLinearGradient(pad, y, pad, y + panelH);
+      panelGrad.addColorStop(0, ap.fillTop);
+      panelGrad.addColorStop(0.55, ap.fill);
+      panelGrad.addColorStop(1, ap.fillBottom);
+      ctx.fillStyle = panelGrad;
+      ctx.fill();
+      ctx.strokeStyle = ap.stroke;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.beginPath();
+      pathRoundRect(ctx, pad + 0.5, y + 0.5, width - pad * 2 - 1, panelH - 1, panelR - 0.5);
+      ctx.strokeStyle = ap.innerHighlight;
+      ctx.lineWidth = 0.75;
+      ctx.stroke();
+      ctx.save();
+      ctx.beginPath();
+      pathRoundRect(ctx, pad, y, width - pad * 2, panelH, 10);
+      ctx.clip();
+      ctx.fillStyle = abilityTextColor(theme);
+      ctx.font = canvasFontSans(500, layout.bodyFontSize);
+      let ty = y + panelPad;
+      for (const line of abLines) {
+        if (line === "") {
+          ty += lineH * 0.55;
+          continue;
+        }
+        ctx.fillText(line, textInsetX, ty);
+        ty += lineH;
+      }
+      ctx.restore();
+      y += panelH + 10;
+    } else {
+      y += 2;
+    }
   } else {
     y += 2;
   }

@@ -17,9 +17,9 @@ export function paintBoudoirBackdropMotifs(
 
   // Silk drape curves sweeping through the lower band
   const drapes: Array<[number, number, number]> = [
-    [0.06, 0.3, 1.4],
-    [0.16, 0.24, 1.1],
-    [0.3, 0.18, 0.8],
+    [0.06, 0.44, 1.8],
+    [0.16, 0.36, 1.4],
+    [0.3, 0.28, 1.0],
   ];
   for (const [lift, alpha, lw] of drapes) {
     ctx.beginPath();
@@ -48,12 +48,12 @@ export function paintBoudoirBackdropMotifs(
     ctx.arc(cx, bandTop + 3, rr, 0, Math.PI, false);
   }
   ctx.strokeStyle = accent;
-  ctx.globalAlpha = 0.22;
-  ctx.lineWidth = 0.8;
+  ctx.globalAlpha = 0.34;
+  ctx.lineWidth = 1.2;
   ctx.stroke();
 
   // Dot picots under each scallop dip
-  ctx.globalAlpha = 0.3;
+  ctx.globalAlpha = 0.42;
   ctx.fillStyle = accent;
   for (let i = 0; i <= scallops; i++) {
     const cx = i * rr * 2;
@@ -65,9 +65,9 @@ export function paintBoudoirBackdropMotifs(
   // Corner rose bud — small spiral, upper right of the frame
   const bx = width * 0.9;
   const by = artTop * 0.55;
-  ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = 0.48;
   ctx.strokeStyle = accent;
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1.3;
   ctx.beginPath();
   for (let t = 0; t < Math.PI * 4.2; t += 0.25) {
     const r = 1.1 + t * 1.05;
