@@ -6,7 +6,7 @@ import { drizzle, type SQLJsDatabase } from "drizzle-orm/sql-js";
 import * as schema from "./schema";
 import { INIT_SQL } from "./init-sql";
 import { runSqliteMigrations } from "./migrate";
-import { loadSqliteBlob, saveSqliteBlob } from "./idb";
+import { loadVaultSqlite, saveVaultSqlite } from "./secure-blob";
 import { createPersistence, type Persistence } from "./persistence";
 import { syncBuiltinTemplates } from "./template-sync";
 import { BUILTIN_TEMPLATES } from "@/lib/templates/registry";
@@ -91,14 +91,14 @@ export async function initDatabase(): Promise<TradingCardDb> {
     locateFile: (file) => `/sqljs/${file}`,
   });
 
-  const existing = await loadSqliteBlob();
+  const existing = await loadVaultSqlite();
   const raw = existing
     ? new SQL.Database(existing)
     : new SQL.Database();
   sqlDb = raw;
   persistence = createPersistence({
     exportFn: () => raw.export(),
-    saveFn: (data) => saveSqliteBlob(data),
+    saveFn: (data) => saveVaultSqlite(data),
   });
 
   raw.run(INIT_SQL);
@@ -111,7 +111,9 @@ export async function initDatabase(): Promise<TradingCardDb> {
 
   if (typeof window !== "undefined") {
     window.addEventListener("beforeunload", () => {
-      if (persistence?.isDirty() && sqlDb) void saveSqliteBlob(sqlDb.export());
+      if (persistence?.isDirty() && sqlDb) {
+        void saveVaultSqlite(sqlDb.export()).catch(() => {});
+      }
     });
     setInterval(() => {
       void persistence?.intervalTick();

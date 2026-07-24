@@ -5,22 +5,14 @@ import initSqlJs from "sql.js";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { getPersistence } from "@/lib/db/client";
-import { saveMediaBytes, saveSqliteBlob } from "@/lib/db/idb";
-import { opfsWrite } from "@/lib/opfs";
+import { saveVaultSqlite } from "@/lib/db/secure-blob";
+import { writeUserBlobRaw } from "@/lib/media/storage";
 import {
   applyVaultBackup,
   parseVaultBackupZip,
   validateVaultSqlite,
   type ParsedVaultBackup,
 } from "@/lib/vault/restore-backup-zip";
-
-async function writeMediaBlob(id: string, data: Uint8Array): Promise<void> {
-  try {
-    await opfsWrite(id, new Blob([new Uint8Array(data)]));
-  } catch {
-    await saveMediaBytes(id, data);
-  }
-}
 
 /**
  * Guided restore from a vault backup ZIP: validate first, confirm, then
@@ -63,8 +55,8 @@ export function VaultRestorePanel({
       // blob between the write below and the reload.
       getPersistence()?.suspend();
       await applyVaultBackup(pending.parsed, {
-        writeMedia: writeMediaBlob,
-        writeSqlite: saveSqliteBlob,
+        writeMedia: writeUserBlobRaw,
+        writeSqlite: saveVaultSqlite,
       });
       window.location.reload();
     } catch (e) {
