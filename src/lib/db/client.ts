@@ -7,17 +7,9 @@ import * as schema from "./schema";
 import { INIT_SQL } from "./init-sql";
 import { runSqliteMigrations } from "./migrate";
 import { loadSqliteBlob, saveSqliteBlob } from "./idb";
-import defaultLayout from "@/lib/default-layout.json";
-import templateAutumn from "@/lib/templates/autumn.json";
-import templateCelestial from "@/lib/templates/celestial.json";
-import templateCelestialClock from "@/lib/templates/celestial_clock.json";
-import templateDuelist from "@/lib/templates/duelist.json";
-import templateFloral from "@/lib/templates/floral.json";
-import templateMonolineInk from "@/lib/templates/monoline_ink.json";
-import templateNeonCity from "@/lib/templates/neon_city.json";
-import templateTide from "@/lib/templates/tide.json";
-import templatePlaneswalker from "@/lib/templates/planeswalker.json";
-import templateTrainer from "@/lib/templates/trainer.json";
+import { createPersistence, type Persistence } from "./persistence";
+import { syncBuiltinTemplates } from "./template-sync";
+import { BUILTIN_TEMPLATES } from "@/lib/templates/registry";
 import { defaultRarityWeightsJson } from "@/lib/rarity-weights";
 import {
   cardTemplates,
@@ -26,20 +18,6 @@ import {
 } from "./schema";
 
 export type TradingCardDb = SQLJsDatabase<typeof schema>;
-
-const BUILTIN_TEMPLATES: { id: string; name: string; layout: object }[] = [
-  { id: "tpl_default", name: "Skirmish", layout: defaultLayout },
-  { id: "tpl_minimal", name: "Planeswalker", layout: templatePlaneswalker },
-  { id: "tpl_aurora", name: "Trainer", layout: templateTrainer },
-  { id: "tpl_arena", name: "Duelist", layout: templateDuelist },
-  { id: "tpl_floral", name: "Floral", layout: templateFloral },
-  { id: "tpl_celestial", name: "Celestial", layout: templateCelestial },
-  { id: "tpl_autumn", name: "Autumn", layout: templateAutumn },
-  { id: "tpl_tide", name: "Tide", layout: templateTide },
-  { id: "tpl_celestial_clock", name: "Celestial clock", layout: templateCelestialClock },
-  { id: "tpl_neon_city", name: "Neon city", layout: templateNeonCity },
-  { id: "tpl_monoline_ink", name: "Monoline ink", layout: templateMonolineInk },
-];
 
 const EXTRA_TEMPLATES = BUILTIN_TEMPLATES.slice(1);
 
@@ -95,30 +73,15 @@ async function ensureExtraTemplates(db: TradingCardDb) {
   if (added) persistDatabase();
 }
 
-/** Refresh built-in layout JSON + labels (theme upgrades, renames). */
-async function syncBuiltinTemplateLayouts(db: TradingCardDb) {
-  for (const row of BUILTIN_TEMPLATES) {
-    await db
-      .update(cardTemplates)
-      .set({
-        layoutJson: JSON.stringify(row.layout),
-        name: row.name,
-      })
-      .where(eq(cardTemplates.id, row.id));
-  }
-  persistDatabase();
-}
-
-let persistTimer: ReturnType<typeof setTimeout> | null = null;
+let persistence: Persistence | null = null;
 
 export function persistDatabase() {
-  if (!sqlDb) return;
-  if (persistTimer) clearTimeout(persistTimer);
-  persistTimer = setTimeout(() => {
-    persistTimer = null;
-    const data = sqlDb!.export();
-    void saveSqliteBlob(data);
-  }, 300);
+  persistence?.markDirty();
+}
+
+/** Suspend/resume/flush access for restore flows. Null before initDatabase. */
+export function getPersistence(): Persistence | null {
+  return persistence;
 }
 
 export async function initDatabase(): Promise<TradingCardDb> {
@@ -133,6 +96,10 @@ export async function initDatabase(): Promise<TradingCardDb> {
     ? new SQL.Database(existing)
     : new SQL.Database();
   sqlDb = raw;
+  persistence = createPersistence({
+    exportFn: () => raw.export(),
+    saveFn: (data) => saveSqliteBlob(data),
+  });
 
   raw.run(INIT_SQL);
   runSqliteMigrations(raw);
@@ -140,14 +107,14 @@ export async function initDatabase(): Promise<TradingCardDb> {
   drizzleDb = drizzle(raw, { schema });
   await seedIfEmpty(drizzleDb);
   await ensureExtraTemplates(drizzleDb);
-  await syncBuiltinTemplateLayouts(drizzleDb);
+  if ((await syncBuiltinTemplates(drizzleDb)) > 0) persistDatabase();
 
   if (typeof window !== "undefined") {
     window.addEventListener("beforeunload", () => {
-      if (sqlDb) void saveSqliteBlob(sqlDb.export());
+      if (persistence?.isDirty() && sqlDb) void saveSqliteBlob(sqlDb.export());
     });
     setInterval(() => {
-      if (sqlDb) void saveSqliteBlob(sqlDb.export());
+      void persistence?.intervalTick();
     }, 8000);
   }
 

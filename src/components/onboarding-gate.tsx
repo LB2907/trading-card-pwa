@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { isOnboardingDone, setOnboardingDone } from "@/lib/vault";
 
+const emptySubscribe = () => () => {};
+
 export function OnboardingGate({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(false);
-  const [done, setDone] = useState(true);
-
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      setDone(isOnboardingDone());
-      setReady(true);
-    });
-    return () => cancelAnimationFrame(id);
-  }, []);
-
-  if (!ready) return null;
+  const [accepted, setAccepted] = useState(false);
+  // useSyncExternalStore instead of an effect: renders correctly on the very
+  // first client frame (no rAF/effect delay, no blank app in background tabs)
+  // while staying hydration-safe against the server-rendered HTML.
+  const storedDone = useSyncExternalStore(
+    emptySubscribe,
+    isOnboardingDone,
+    () => true,
+  );
+  const done = accepted || storedDone;
 
   if (!done) {
     return (
@@ -37,7 +37,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
           className="w-fit rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white hover:bg-violet-500"
           onClick={() => {
             setOnboardingDone();
-            setDone(true);
+            setAccepted(true);
           }}
         >
           I understand — continue

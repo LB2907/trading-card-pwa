@@ -37,6 +37,7 @@ import {
   setExportWatermarkText,
 } from "@/lib/export-preferences";
 import { buildVaultBackupZip } from "@/lib/vault/build-backup-zip";
+import { VaultRestorePanel } from "@/components/vault-restore-panel";
 import { createTcgSetWithStarterPack } from "@/lib/sets/create-tcg-set";
 import {
   hasPinConfigured,
@@ -73,13 +74,10 @@ export default function SettingsPage() {
   const folderExportSupported = isFolderExportSupported();
 
   useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      setVault(isVaultEnabled());
-      setBlur(isBlurBackground());
-      setExportDirLabel(getExportDirectoryLabel());
-      setWatermarkDraft(getExportWatermarkText());
-    });
-    return () => cancelAnimationFrame(id);
+    setVault(isVaultEnabled());
+    setBlur(isBlurBackground());
+    setExportDirLabel(getExportDirectoryLabel());
+    setWatermarkDraft(getExportWatermarkText());
   }, []);
 
   useEffect(() => {
@@ -226,7 +224,8 @@ export default function SettingsPage() {
           <CardDescription>
             ZIP includes <code className="rounded bg-muted px-1 py-0.5 text-xs">vault.sqlite</code>{" "}
             plus <code className="rounded bg-muted px-1 py-0.5 text-xs">media/</code> files
-            referenced by your cards. Cloud sync (above) is separate.
+            referenced by your cards. Restore replaces this device&apos;s vault with a
+            backup. Cloud sync (above) is separate.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -258,6 +257,8 @@ export default function SettingsPage() {
           >
             {backupBusy ? "Building backup…" : "Download vault backup (ZIP)"}
           </Button>
+          <Separator className="my-4" />
+          <VaultRestorePanel onMessage={setMsg} />
         </CardContent>
       </Card>
 

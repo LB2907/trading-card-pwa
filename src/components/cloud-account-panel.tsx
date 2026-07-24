@@ -9,6 +9,7 @@ import { buildCloudSnapshotV1 } from "@/lib/cloud/build-snapshot";
 import { isCloudSnapshotV1 } from "@/lib/cloud/snapshot-types";
 import { restoreCloudSnapshot } from "@/lib/cloud/restore-snapshot";
 import { useDb, usePersistDb } from "@/components/app-providers";
+import { getPersistence, getSqlDb } from "@/lib/db/client";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -135,7 +136,15 @@ export function CloudAccountPanel() {
     setBusy(true);
     setMsg(null);
     try {
-      await restoreCloudSnapshot(db, pendingSnapshot);
+      const rawDb = getSqlDb();
+      if (!rawDb) throw new Error("Local database is not ready.");
+      const persistence = getPersistence();
+      persistence?.suspend();
+      try {
+        await restoreCloudSnapshot(db, rawDb, pendingSnapshot);
+      } finally {
+        persistence?.resume();
+      }
       persist();
       setConfirmRestore(false);
       setPendingSnapshot(null);

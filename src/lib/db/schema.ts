@@ -16,6 +16,8 @@ export const cardTemplates = sqliteTable("card_templates", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   layoutJson: text("layout_json").notNull(),
+  /** "builtin" rows may be refreshed by app upgrades; "user" rows are never touched. */
+  origin: text("origin").notNull().default("builtin"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
