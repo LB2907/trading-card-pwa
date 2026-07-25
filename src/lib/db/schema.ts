@@ -44,6 +44,8 @@ export const cardInstances = sqliteTable("card_instances", {
   flavorText: text("flavor_text").notNull().default(""),
   /** Free text for the card's bottom rail (e.g. "Requested by: …"). Empty hides the rail. */
   creditText: text("credit_text").notNull().default(""),
+  /** Opt-in rarity foil/finish. Off by default — rarity alone no longer implies foil. */
+  foil: integer("foil", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });

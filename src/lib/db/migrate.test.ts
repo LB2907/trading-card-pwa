@@ -10,10 +10,15 @@ function columns(db: Database, table: string): string[] {
   return r[0].values.map((row) => String(row[i >= 0 ? i : 1]));
 }
 
-/** A vault created before the rail existed: same DDL minus the new column. */
+/** A vault from before the rail and the foil toggle: same DDL minus both columns. */
 function legacyDb(SQL: Awaited<ReturnType<typeof initSqlJs>>): Database {
   const db = new SQL.Database();
-  db.run(INIT_SQL.replace(/\s*credit_text TEXT NOT NULL DEFAULT '',\n/, "\n"));
+  db.run(
+    INIT_SQL.replace(/\s*credit_text TEXT NOT NULL DEFAULT '',\n/, "\n").replace(
+      /\s*foil INTEGER NOT NULL DEFAULT 0,\n/,
+      "\n",
+    ),
+  );
   return db;
 }
 
@@ -49,6 +54,35 @@ describe("runSqliteMigrations", () => {
     expect(r[0].values[0][0]).toBe("");
   });
 
+  it("adds foil to a vault that predates the finish toggle", async () => {
+    const SQL = await initSqlJs();
+    const db = legacyDb(SQL);
+    expect(columns(db, "card_instances")).not.toContain("foil");
+
+    runSqliteMigrations(db);
+
+    expect(columns(db, "card_instances")).toContain("foil");
+  });
+
+  it("leaves existing cards without foil, matching the new default", async () => {
+    const SQL = await initSqlJs();
+    const db = legacyDb(SQL);
+    const now = Date.now();
+    db.run(`INSERT INTO tcg_sets (id, name, created_at) VALUES ('s1', 'Set', ${now})`);
+    db.run(
+      `INSERT INTO card_templates (id, name, layout_json, created_at) VALUES ('t1', 'T', '{}', ${now})`,
+    );
+    db.run(
+      `INSERT INTO card_instances (id, set_id, template_id, media_path, rarity, created_at, updated_at)
+       VALUES ('c1', 's1', 't1', 'a.png', 'mythic', ${now}, ${now})`,
+    );
+
+    runSqliteMigrations(db);
+
+    const r = db.exec("SELECT foil FROM card_instances WHERE id = 'c1'");
+    expect(r[0].values[0][0]).toBe(0);
+  });
+
   it("is idempotent", async () => {
     const SQL = await initSqlJs();
     const db = legacyDb(SQL);
@@ -57,6 +91,7 @@ describe("runSqliteMigrations", () => {
     expect(
       columns(db, "card_instances").filter((c) => c === "credit_text"),
     ).toHaveLength(1);
+    expect(columns(db, "card_instances").filter((c) => c === "foil")).toHaveLength(1);
   });
 
   it("leaves a fresh vault (DDL already current) untouched", async () => {
@@ -64,6 +99,7 @@ describe("runSqliteMigrations", () => {
     const db = new SQL.Database();
     db.run(INIT_SQL);
     expect(columns(db, "card_instances")).toContain("credit_text");
+    expect(columns(db, "card_instances")).toContain("foil");
     expect(() => runSqliteMigrations(db)).not.toThrow();
   });
 });

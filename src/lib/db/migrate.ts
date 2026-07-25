@@ -24,6 +24,8 @@ export function runSqliteMigrations(db: Database): void {
     "credit_text",
     "ALTER TABLE card_instances ADD COLUMN credit_text TEXT NOT NULL DEFAULT ''",
   );
+  // Existing high-rarity cards lose their automatic foil: the finish is now opt-in.
+  add("foil", "ALTER TABLE card_instances ADD COLUMN foil INTEGER NOT NULL DEFAULT 0");
 
   const tplCols = tableColumns(db, "card_templates");
   if (tplCols.length > 0 && !tplCols.includes("origin")) {

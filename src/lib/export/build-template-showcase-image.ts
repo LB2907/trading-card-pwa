@@ -77,6 +77,7 @@ function showcasePlaceholderInstance(): CardInstance {
     flavorText:
       "Flavor text — italic and softer — sits below the rules when space allows.",
     creditText: "",
+    foil: true,
     createdAt: t,
     updatedAt: t,
   };

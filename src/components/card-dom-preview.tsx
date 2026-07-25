@@ -128,7 +128,7 @@ export function CardDomPreview({
       }}
     >
       <ThemedMotifOverlay theme={theme} />
-      <FoilOverlay rarity={instance.rarity} />
+      {instance.foil ? <FoilOverlay rarity={instance.rarity} /> : null}
       <div
         className={`relative mx-2 mt-2 flex min-h-0 items-center justify-center overflow-hidden ring-1 ring-white/15 ${roundArt}`}
         style={{

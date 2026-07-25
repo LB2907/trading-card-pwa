@@ -45,6 +45,8 @@ export type NewCardFields = {
   flavorText: string;
   /** Optional bottom-rail text; omitted or empty hides the rail. */
   creditText?: string;
+  /** Opt-in rarity foil; off unless the card asks for it. */
+  foil?: boolean;
 };
 
 export async function insertCardWithCollection(
@@ -72,6 +74,7 @@ export async function insertCardWithCollection(
     abilityText: fields.abilityText,
     flavorText: fields.flavorText,
     creditText: fields.creditText ?? "",
+    foil: fields.foil ?? false,
     createdAt: now,
     updatedAt: now,
   });

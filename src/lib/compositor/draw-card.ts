@@ -726,14 +726,17 @@ export function drawTradingCard(
 
   // Rarity foil / finish over the whole face, still inside the outer clip so
   // it follows the rounded corners; the watermark composites on top of it.
-  paintFoilFinish(
-    ctx,
-    width,
-    h,
-    outerR,
-    foilFinishForTier(rarityTier(instance.rarity)),
-    rv,
-  );
+  // Opt-in per card: rarity sets which finish you get, not whether you get one.
+  if (instance.foil) {
+    paintFoilFinish(
+      ctx,
+      width,
+      h,
+      outerR,
+      foilFinishForTier(rarityTier(instance.rarity)),
+      rv,
+    );
+  }
 
   ctx.restore();
 

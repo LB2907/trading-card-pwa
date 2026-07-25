@@ -36,6 +36,7 @@ function fakeInstance(rarity: string): CardInstance {
     abilityText: "Charm target creature until end of turn.",
     flavorText: "Kneel, and keep your name.",
     creditText: "",
+    foil: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -305,10 +306,51 @@ describe("compositor render snapshots (headless napi canvas)", () => {
     }
   });
 
-  it("foil changes the render (mythic differs from common)", () => {
+  it("paints no foil unless the card opts in", () => {
     const t = BUILTIN_TEMPLATES.find((x) => x.id === "tpl_obsidian")!;
-    const common = hash(renderTemplate(JSON.stringify(t.layout), "common"));
-    const mythic = hash(renderTemplate(JSON.stringify(t.layout), "mythic"));
-    expect(mythic).not.toBe(common);
+    const off = hash(
+      renderInstance(JSON.stringify(t.layout), {
+        ...fakeInstance("mythic"),
+        foil: false,
+      }),
+    );
+    const on = hash(
+      renderInstance(JSON.stringify(t.layout), {
+        ...fakeInstance("mythic"),
+        foil: true,
+      }),
+    );
+    expect(on).not.toBe(off);
+  });
+
+  it("defaults a high-rarity card to no foil", () => {
+    const t = BUILTIN_TEMPLATES.find((x) => x.id === "tpl_obsidian")!;
+    // fakeInstance carries the schema default (false), so the plain render and
+    // an explicitly foil-off render must be identical.
+    const plain = hash(renderTemplate(JSON.stringify(t.layout), "mythic"));
+    const explicitOff = hash(
+      renderInstance(JSON.stringify(t.layout), {
+        ...fakeInstance("mythic"),
+        foil: false,
+      }),
+    );
+    expect(plain).toBe(explicitOff);
+  });
+
+  it("still gives a common card no finish even when foil is on", () => {
+    const t = BUILTIN_TEMPLATES.find((x) => x.id === "tpl_obsidian")!;
+    const on = hash(
+      renderInstance(JSON.stringify(t.layout), {
+        ...fakeInstance("common"),
+        foil: true,
+      }),
+    );
+    const off = hash(
+      renderInstance(JSON.stringify(t.layout), {
+        ...fakeInstance("common"),
+        foil: false,
+      }),
+    );
+    expect(on).toBe(off);
   });
 });

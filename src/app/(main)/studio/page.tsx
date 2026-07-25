@@ -30,6 +30,8 @@ import {
   storeArtFile,
 } from "@/lib/cards/create-from-upload";
 import { CREDIT_RAIL_PRESET } from "@/lib/compositor/credit-rail";
+import { hasFoil } from "@/lib/compositor/foil";
+import { rarityTier } from "@/lib/rarity";
 import { createTcgSetWithStarterPack } from "@/lib/sets/create-tcg-set";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +41,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectNative } from "@/components/ui/select-native";
@@ -121,6 +124,9 @@ function StudioPageInner() {
   const [ability, setAbility] = useState("");
   const [flavor, setFlavor] = useState("");
   const [credit, setCredit] = useState("");
+  const [foil, setFoil] = useState(false);
+  /** Common and uncommon have no finish at all — the toggle is inert there. */
+  const rarityHasFoil = hasFoil(rarityTier(rarity));
   const [mediaId, setMediaId] = useState<string | null>(null);
   const [mediaKind, setMediaKind] = useState("image");
   const [busy, setBusy] = useState(false);
@@ -159,6 +165,7 @@ function StudioPageInner() {
           setAbility(inst.abilityText || "");
           setFlavor(inst.flavorText || "");
           setCredit(inst.creditText || "");
+          setFoil(!!inst.foil);
           setMediaId(inst.mediaPath);
           setMediaKind(inst.mediaKind || "image");
           setMsg(null);
@@ -232,6 +239,7 @@ function StudioPageInner() {
       abilityText: ability,
       flavorText: flavor,
       creditText: credit,
+      foil,
       createdAt: new Date(),
       updatedAt: new Date(),
     }),
@@ -252,6 +260,7 @@ function StudioPageInner() {
       ability,
       flavor,
       credit,
+      foil,
     ],
   );
 
@@ -343,6 +352,7 @@ function StudioPageInner() {
             abilityText: ability,
             flavorText: flavor,
             creditText: credit,
+            foil,
             updatedAt: now,
           })
           .where(eq(cardInstances.id, editingId));
@@ -368,6 +378,7 @@ function StudioPageInner() {
           abilityText: ability,
           flavorText: flavor,
           creditText: credit,
+          foil,
         },
       );
       persist();
@@ -590,6 +601,29 @@ function StudioPageInner() {
                 <p className="text-xs text-muted-foreground">
                   A small line along the bottom of the card. Leave empty to hide it.
                 </p>
+              </div>
+              <div className="flex items-start gap-3 rounded-lg border border-border/80 bg-muted/20 p-3">
+                <Checkbox
+                  id="studio-foil"
+                  className="mt-0.5"
+                  checked={foil}
+                  onCheckedChange={(v: boolean | "indeterminate") =>
+                    setFoil(v === true)
+                  }
+                />
+                <div className="min-w-0 space-y-1">
+                  <Label
+                    htmlFor="studio-foil"
+                    className="cursor-pointer text-sm font-medium leading-snug"
+                  >
+                    Foil finish
+                  </Label>
+                  <p className="text-xs leading-snug text-muted-foreground">
+                    {rarityHasFoil
+                      ? "Adds a metallic sheen across the card face, in both the preview and every export."
+                      : "Common and uncommon cards have no finish — raise the rarity to use this."}
+                  </p>
+                </div>
               </div>
             </div>
 
