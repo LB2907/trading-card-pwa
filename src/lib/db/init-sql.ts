@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS card_instances (
   stat_mind INTEGER NOT NULL DEFAULT 0,
   ability_text TEXT NOT NULL DEFAULT '',
   flavor_text TEXT NOT NULL DEFAULT '',
+  credit_text TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

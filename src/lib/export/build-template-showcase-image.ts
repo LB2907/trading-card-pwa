@@ -76,6 +76,7 @@ function showcasePlaceholderInstance(): CardInstance {
       "Rules text appears in this panel so you can see how each frame treats the text area.",
     flavorText:
       "Flavor text — italic and softer — sits below the rules when space allows.",
+    creditText: "",
     createdAt: t,
     updatedAt: t,
   };

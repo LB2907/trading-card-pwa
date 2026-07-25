@@ -30,9 +30,26 @@ import {
   artInnerRadiusForTheme,
   normalizeTcgTheme,
   outerRadiusForTheme,
+  type TcgTheme,
 } from "@/lib/tcg-theme-base";
+import {
+  bottomMarginForCredit,
+  creditRailMetrics,
+  drawTrackedText,
+  fitCreditText,
+  hasCreditRail,
+  CREDIT_RAIL_TRACKING,
+} from "@/lib/compositor/credit-rail";
 import { artPanelMetrics, cardHeightForWidth } from "@/lib/compositor/layout-metrics";
 import { THEME_DESCRIPTORS } from "@/lib/compositor/theme-descriptors";
+import {
+  buildLuminanceProbe,
+  probeLuminanceAt,
+  tileCenterInCardSpace,
+  watermarkInkForLuminance,
+  WATERMARK_ALPHA,
+  type LuminanceProbe,
+} from "@/lib/compositor/watermark-ink";
 
 function intrinsicArtSize(src: CanvasImageSource): { w: number; h: number } {
   if (src instanceof HTMLVideoElement) {
@@ -190,9 +207,15 @@ function watermarkFont(sizePx: number): string {
 
 export type ExportWatermarkStrength = "card" | "sheet";
 
+const WATERMARK_ANGLE_RAD = (-26 * Math.PI) / 180;
+
 /**
  * Tiled diagonal watermark over a rectangle (full canvas or a single card).
  * `sheet` is denser and more opaque — used for multi-template showcase PNGs.
+ *
+ * Pass `probe` (a luminance sample of what is already painted) to let each tile
+ * flip between light and dark ink, so the mark reads over bright art as well as
+ * over the near-black frame. Without it the mark falls back to light-on-dark.
  */
 export function drawExportWatermarkOnRect(
   ctx: CanvasRenderingContext2D,
@@ -200,6 +223,7 @@ export function drawExportWatermarkOnRect(
   h: number,
   text: string,
   strength: ExportWatermarkStrength = "card",
+  probe?: LuminanceProbe,
 ): void {
   const t = text.trim();
   if (!t) return;
@@ -213,8 +237,7 @@ export function drawExportWatermarkOnRect(
     fontPx * (sheet ? 2.25 : 3.2),
     width * (sheet ? 0.36 : 0.55),
   );
-  const shadowA = sheet ? 0.11 : 0.045;
-  const fillA = sheet ? 0.14 : 0.055;
+  const alpha = WATERMARK_ALPHA[sheet ? "sheet" : "card"];
   const spanW = width * (sheet ? 1.35 : 1.2);
   const spanH = h * (sheet ? 1.35 : 1.0);
   ctx.save();
@@ -225,18 +248,104 @@ export function drawExportWatermarkOnRect(
   ctx.shadowOffsetY = 0;
   ctx.shadowColor = "transparent";
   ctx.translate(width / 2, h / 2);
-  ctx.rotate((-26 * Math.PI) / 180);
+  ctx.rotate(WATERMARK_ANGLE_RAD);
   ctx.font = watermarkFont(fontPx);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (let y = -spanH; y <= spanH; y += step) {
     for (let x = -spanW; x <= spanW; x += step) {
-      ctx.fillStyle = `rgba(0,0,0,${shadowA})`;
+      let bg = 0;
+      if (probe) {
+        const at = tileCenterInCardSpace(x, y, width, h, WATERMARK_ANGLE_RAD);
+        bg = probeLuminanceAt(probe, at.x / width, at.y / h);
+      }
+      const { ink, halo } = watermarkInkForLuminance(bg, alpha);
+      ctx.fillStyle = halo;
       ctx.fillText(t, x + 0.5, y + 0.5);
-      ctx.fillStyle = `rgba(255,255,255,${fillA})`;
+      ctx.fillStyle = ink;
       ctx.fillText(t, x, y);
     }
   }
+  ctx.restore();
+}
+
+/** Downsample what is currently on the canvas into a luminance grid. */
+function probeCanvasLuminance(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  h: number,
+): LuminanceProbe | undefined {
+  const source = ctx.canvas;
+  if (!source) return undefined;
+  const cols = 16;
+  const rows = Math.max(1, Math.round((cols * h) / width));
+  try {
+    const small = document.createElement("canvas");
+    small.width = cols;
+    small.height = rows;
+    const sctx = small.getContext("2d");
+    if (!sctx) return undefined;
+    sctx.imageSmoothingEnabled = true;
+    sctx.imageSmoothingQuality = "high";
+    sctx.drawImage(source, 0, 0, cols, rows);
+    const { data } = sctx.getImageData(0, 0, cols, rows);
+    return buildLuminanceProbe(data, cols, rows);
+  } catch {
+    // Tainted canvas or a context that cannot read back — fall back to the
+    // non-adaptive mark rather than losing the watermark entirely.
+    return undefined;
+  }
+}
+
+/**
+ * The bottom rail: a hairline plus one small tracked line of credit text,
+ * pinned to the base of the card. Colour comes from the theme's type-line ink
+ * so it belongs to every family without extra per-theme configuration.
+ */
+function drawCreditRail(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  h: number,
+  pad: number,
+  textInsetX: number,
+  creditText: string,
+  theme: TcgTheme,
+): void {
+  const rail = creditRailMetrics(width);
+  const railTop = h - pad - rail.height;
+  const rightEdge = width - pad;
+
+  ctx.save();
+
+  const divY = railTop + 0.5;
+  const grd = ctx.createLinearGradient(textInsetX, divY, rightEdge, divY);
+  grd.addColorStop(0, "rgba(255,255,255,0)");
+  grd.addColorStop(0.18, "rgba(255,255,255,0.1)");
+  grd.addColorStop(0.5, "rgba(255,255,255,0.14)");
+  grd.addColorStop(0.85, "rgba(255,255,255,0.08)");
+  grd.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.strokeStyle = grd;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(textInsetX, divY);
+  ctx.lineTo(rightEdge, divY);
+  ctx.stroke();
+
+  ctx.font = canvasFontSans(600, rail.fontSize);
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+  ctx.globalAlpha = 0.62;
+  ctx.fillStyle = THEME_DESCRIPTORS[theme].typeColor;
+  const maxW = rightEdge - textInsetX;
+  const label = fitCreditText(ctx, creditText, maxW, CREDIT_RAIL_TRACKING);
+  drawTrackedText(
+    ctx,
+    label,
+    textInsetX,
+    railTop + rail.gap,
+    CREDIT_RAIL_TRACKING,
+  );
+
   ctx.restore();
 }
 
@@ -250,7 +359,10 @@ export function drawTradingCard(
   ctx.save();
   ctx.scale(pixelRatio, pixelRatio);
 
-  const { pad, artTop, artW, artH } = artPanelMetrics(width, layout);
+  const railReserve = hasCreditRail(instance.creditText)
+    ? creditRailMetrics(width).height
+    : 0;
+  const { pad, artTop, artW, artH } = artPanelMetrics(width, layout, railReserve);
   const mat = parseHex(layout.artMatColor ?? "#08080a", "#08080a");
   const rv = rarityVisual(instance.rarity);
   const theme = normalizeTcgTheme(layout.tcgTheme);
@@ -274,6 +386,10 @@ export function drawTradingCard(
   ctx.fillRect(pad, artTop, artW, artH);
   const { w: iw, h: ih } = intrinsicArtSize(artImage);
   if (iw > 0 && ih > 0) {
+    // Source art is routinely 2–4k wide and lands in an ~400 px window; the
+    // browser default resamples cheaply and aliases fine detail badly.
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     const scale = Math.min(artW / iw, artH / ih);
     const dw = iw * scale;
     const dh = ih * scale;
@@ -472,7 +588,7 @@ export function drawTradingCard(
 
   y = pillY1 + pillH + 14;
 
-  const bottomMargin = 10;
+  const bottomMargin = bottomMarginForCredit(width, instance.creditText);
   const roomToBottom = () => h - pad - y - bottomMargin;
   const flavorLineH = layout.flavorFontSize * 1.35;
   // Ability (rules) is functional and wins the space fight; flavor is
@@ -580,6 +696,10 @@ export function drawTradingCard(
     }
   }
 
+  if (hasCreditRail(instance.creditText)) {
+    drawCreditRail(ctx, width, h, pad, textInsetX, instance.creditText, theme);
+  }
+
   // Rarity foil / finish over the whole face, still inside the outer clip so
   // it follows the rounded corners; the watermark composites on top of it.
   paintFoilFinish(
@@ -604,8 +724,10 @@ export function drawTradingCard(
     wmCanvas.height = bufH;
     const wmCtx = wmCanvas.getContext("2d");
     if (wmCtx) {
+      // Sample the finished card face so each tile can pick a readable tone.
+      const probe = probeCanvasLuminance(ctx, width, h);
       wmCtx.setTransform(pr, 0, 0, pr, 0, 0);
-      drawExportWatermarkOnRect(wmCtx, width, h, wm, "card");
+      drawExportWatermarkOnRect(wmCtx, width, h, wm, "card", probe);
       ctx.save();
       ctx.beginPath();
       pathRoundRect(ctx, 0, 0, width, h, outerR);

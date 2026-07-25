@@ -43,6 +43,8 @@ export type NewCardFields = {
   statMind: number;
   abilityText: string;
   flavorText: string;
+  /** Optional bottom-rail text; omitted or empty hides the rail. */
+  creditText?: string;
 };
 
 export async function insertCardWithCollection(
@@ -69,6 +71,7 @@ export async function insertCardWithCollection(
     statMind: fields.statMind,
     abilityText: fields.abilityText,
     flavorText: fields.flavorText,
+    creditText: fields.creditText ?? "",
     createdAt: now,
     updatedAt: now,
   });
