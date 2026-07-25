@@ -29,6 +29,7 @@ import {
   insertCardWithCollection,
   storeArtFile,
 } from "@/lib/cards/create-from-upload";
+import { CREDIT_RAIL_PRESET } from "@/lib/compositor/credit-rail";
 import { createTcgSetWithStarterPack } from "@/lib/sets/create-tcg-set";
 import { Button } from "@/components/ui/button";
 import {
@@ -119,6 +120,7 @@ function StudioPageInner() {
   const [mind, setMind] = useState("0");
   const [ability, setAbility] = useState("");
   const [flavor, setFlavor] = useState("");
+  const [credit, setCredit] = useState("");
   const [mediaId, setMediaId] = useState<string | null>(null);
   const [mediaKind, setMediaKind] = useState("image");
   const [busy, setBusy] = useState(false);
@@ -156,6 +158,7 @@ function StudioPageInner() {
           setMind(String(inst.statMind ?? 0));
           setAbility(inst.abilityText || "");
           setFlavor(inst.flavorText || "");
+          setCredit(inst.creditText || "");
           setMediaId(inst.mediaPath);
           setMediaKind(inst.mediaKind || "image");
           setMsg(null);
@@ -228,6 +231,7 @@ function StudioPageInner() {
       statMind: Number(mind) || 0,
       abilityText: ability,
       flavorText: flavor,
+      creditText: credit,
       createdAt: new Date(),
       updatedAt: new Date(),
     }),
@@ -247,6 +251,7 @@ function StudioPageInner() {
       mind,
       ability,
       flavor,
+      credit,
     ],
   );
 
@@ -337,6 +342,7 @@ function StudioPageInner() {
             statMind: Number(mind) || 0,
             abilityText: ability,
             flavorText: flavor,
+            creditText: credit,
             updatedAt: now,
           })
           .where(eq(cardInstances.id, editingId));
@@ -361,6 +367,7 @@ function StudioPageInner() {
           statMind: Number(mind) || 0,
           abilityText: ability,
           flavorText: flavor,
+          creditText: credit,
         },
       );
       persist();
@@ -555,6 +562,34 @@ function StudioPageInner() {
                   onChange={(e) => setFlavor(e.target.value)}
                   rows={2}
                 />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="studio-credit">Bottom rail</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-muted-foreground"
+                    onClick={() =>
+                      setCredit((c) =>
+                        c.trim() ? c : CREDIT_RAIL_PRESET,
+                      )
+                    }
+                  >
+                    Requested by:
+                  </Button>
+                </div>
+                <Input
+                  id="studio-credit"
+                  dir="ltr"
+                  value={credit}
+                  onChange={(e) => setCredit(e.target.value)}
+                  placeholder="Requested by: …"
+                />
+                <p className="text-xs text-muted-foreground">
+                  A small line along the bottom of the card. Leave empty to hide it.
+                </p>
               </div>
             </div>
 

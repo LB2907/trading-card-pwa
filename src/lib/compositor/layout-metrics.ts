@@ -17,8 +17,19 @@ const TEXT_BAND_FLEX = CARD_TEXT_BAND_FLEX_WEIGHT;
 /** Vertical fraction of the flex-split region used for art (rest is breathing room). */
 const ART_HEIGHT_FACTOR = 0.91;
 
-/** Art panel geometry in the same coordinate space as `drawTradingCard` (CSS pixels before ctx.scale). */
-export function artPanelMetrics(width: number, layout: CardLayoutJson) {
+/**
+ * Art panel geometry in the same coordinate space as `drawTradingCard` (CSS pixels before ctx.scale).
+ *
+ * `reserveBottom` is height claimed by something pinned to the base of the card
+ * (currently the credit rail). It comes out of the art window rather than the
+ * text band, so adding a rail never squeezes the rules or flavor text off the
+ * card. The DOM preview gets the same behaviour for free from flex sizing.
+ */
+export function artPanelMetrics(
+  width: number,
+  layout: CardLayoutJson,
+  reserveBottom = 0,
+) {
   const h = cardHeightForWidth(width);
   const pad = Number(layout.innerPadding);
   const safePad = Number.isFinite(pad) ? pad : 12;
@@ -26,7 +37,11 @@ export function artPanelMetrics(width: number, layout: CardLayoutJson) {
   const flex = Number(layout.artFlex);
   const artFlex = Number.isFinite(flex) && flex > 0 ? flex : 3.35;
   const innerH = h - safePad * 2;
-  const artH = innerH * (artFlex / (artFlex + TEXT_BAND_FLEX)) * ART_HEIGHT_FACTOR;
+  const reserve = Number.isFinite(reserveBottom) ? Math.max(0, reserveBottom) : 0;
+  const fullArtH =
+    innerH * (artFlex / (artFlex + TEXT_BAND_FLEX)) * ART_HEIGHT_FACTOR;
+  // Never let the reserve collapse the art window entirely.
+  const artH = Math.max(fullArtH * 0.5, fullArtH - reserve);
   const artW = width - safePad * 2;
   return { cardH: h, pad: safePad, artTop, artW, artH };
 }

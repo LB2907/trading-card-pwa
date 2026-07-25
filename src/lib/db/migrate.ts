@@ -20,6 +20,10 @@ export function runSqliteMigrations(db: Database): void {
   add("stat_speed", "ALTER TABLE card_instances ADD COLUMN stat_speed INTEGER NOT NULL DEFAULT 0");
   add("stat_health", "ALTER TABLE card_instances ADD COLUMN stat_health INTEGER NOT NULL DEFAULT 0");
   add("stat_mind", "ALTER TABLE card_instances ADD COLUMN stat_mind INTEGER NOT NULL DEFAULT 0");
+  add(
+    "credit_text",
+    "ALTER TABLE card_instances ADD COLUMN credit_text TEXT NOT NULL DEFAULT ''",
+  );
 
   const tplCols = tableColumns(db, "card_templates");
   if (tplCols.length > 0 && !tplCols.includes("origin")) {

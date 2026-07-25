@@ -22,6 +22,13 @@ import type { CardInstance } from "@/lib/db/schema";
 import { withPlaybackMime } from "@/lib/media/card-media-mode";
 import { loadUserBlob } from "@/lib/media/storage";
 import { CARD_TEXT_BAND_FLEX_WEIGHT } from "@/lib/compositor/layout-metrics";
+import { CARD_LAYOUT_WIDTH } from "@/lib/compositor/card-resolution";
+import { THEME_DESCRIPTORS } from "@/lib/compositor/theme-descriptors";
+import {
+  CREDIT_RAIL_TRACKING,
+  creditRailMetrics,
+  hasCreditRail,
+} from "@/lib/compositor/credit-rail";
 import { ThemedMotifOverlay } from "@/components/themed-motif-overlay";
 import { FoilOverlay } from "@/components/foil-overlay";
 import { normalizeTcgTheme } from "@/lib/tcg-theme-base";
@@ -74,6 +81,7 @@ export function CardDomPreview({
   const roundOuter = domPreviewRoundedClass(layout);
   const roundArt = domPreviewArtRoundedClass(layout);
   const apStyle = abilityPanelStyle(theme);
+  const rail = creditRailMetrics(CARD_LAYOUT_WIDTH);
   const extraShadow = domPreviewRarityExtraShadow(instance.rarity);
   const shellShadow = extraShadow
     ? `0 22px 48px rgba(0,0,0,0.52), 0 0 0 1px rgba(255,255,255,0.04), ${extraShadow}`
@@ -317,6 +325,24 @@ export function CardDomPreview({
           </p>
         ) : null}
       </div>
+
+      {hasCreditRail(instance.creditText) ? (
+        <div
+          className="shrink-0 border-t border-white/[0.09] px-3 pb-1.5 pt-1"
+          style={{ marginLeft: 12, marginRight: 12 }}
+        >
+          <p
+            className="truncate opacity-[0.62]"
+            style={{
+              fontSize: rail.fontSize,
+              letterSpacing: `${CREDIT_RAIL_TRACKING}px`,
+              color: THEME_DESCRIPTORS[theme].typeColor,
+            }}
+          >
+            {instance.creditText.trim()}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
