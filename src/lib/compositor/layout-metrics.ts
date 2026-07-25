@@ -45,3 +45,22 @@ export function artPanelMetrics(
   const artW = width - safePad * 2;
   return { cardH: h, pad: safePad, artTop, artW, artH };
 }
+
+/**
+ * Usable text width inside the ability panel.
+ *
+ * The panel spans `pad … cardWidth - pad`, but the rules text starts at
+ * `textInsetX`, which is already inset from the panel's left edge. Wrapping to
+ * `cardWidth - textInsetX - pad` therefore let text run flush to the panel's
+ * right border with no padding at all. Mirroring the left inset on the right
+ * keeps the block centred inside the panel.
+ */
+export function abilityTextMaxWidth(
+  cardWidth: number,
+  pad: number,
+  textInsetX: number,
+): number {
+  const panelRight = cardWidth - pad;
+  const leftInset = Math.max(0, textInsetX - pad);
+  return Math.max(0, panelRight - leftInset - textInsetX);
+}

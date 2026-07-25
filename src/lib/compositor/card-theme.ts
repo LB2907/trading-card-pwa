@@ -867,6 +867,23 @@ export function drawTrainerHpBadge(
   return pw + 8;
 }
 
+/** Corner radius of the nameplate bar. Exported so the rarity gem can be fitted inside it. */
+export function nameplateBarRadius(theme: TcgTheme): number {
+  return theme === "duelist"
+    ? 4
+    : theme === "floral" || theme === "autumn" || theme === "boudoir"
+      ? 8
+      : theme === "tide"
+        ? 6
+        : theme === "neon_city"
+          ? 5
+          : theme === "celestial_clock"
+            ? 6
+            : theme === "monoline_ink"
+              ? 9
+              : 7;
+}
+
 export function drawNameplateBar(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -877,20 +894,7 @@ export function drawNameplateBar(
 ): void {
   const { showBar, barColor } = nameplateStyle(theme);
   if (!showBar) return;
-  const r =
-    theme === "duelist"
-      ? 4
-      : theme === "floral" || theme === "autumn" || theme === "boudoir"
-        ? 8
-        : theme === "tide"
-          ? 6
-          : theme === "neon_city"
-            ? 5
-            : theme === "celestial_clock"
-              ? 6
-              : theme === "monoline_ink"
-                ? 9
-                : 7;
+  const r = nameplateBarRadius(theme);
   ctx.save();
   ctx.beginPath();
   pathRoundRect(ctx, x, y, w, h, r);

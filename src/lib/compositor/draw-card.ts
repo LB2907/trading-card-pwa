@@ -10,6 +10,7 @@ import {
   applyTypeLineFont,
   drawNameplateBar,
   drawTrainerHpBadge,
+  nameplateBarRadius,
   formatCostStat,
   formatDefenseStat,
   formatHealthStat,
@@ -33,6 +34,11 @@ import {
   type TcgTheme,
 } from "@/lib/tcg-theme-base";
 import {
+  RARITY_GEM_STROKE,
+  gemGradientStops,
+  rarityGemPlacement,
+} from "@/lib/compositor/rarity-gem";
+import {
   bottomMarginForCredit,
   creditRailMetrics,
   drawTrackedText,
@@ -40,7 +46,11 @@ import {
   hasCreditRail,
   CREDIT_RAIL_TRACKING,
 } from "@/lib/compositor/credit-rail";
-import { artPanelMetrics, cardHeightForWidth } from "@/lib/compositor/layout-metrics";
+import {
+  abilityTextMaxWidth,
+  artPanelMetrics,
+  cardHeightForWidth,
+} from "@/lib/compositor/layout-metrics";
 import { THEME_DESCRIPTORS } from "@/lib/compositor/theme-descriptors";
 import {
   buildLuminanceProbe,
@@ -456,39 +466,48 @@ export function drawTradingCard(
   ctx.shadowOffsetY = 0;
 
   const nameMidY = y + 3 + nameTextH / 2;
+  // Fit the gem to the nameplate bar rather than to the name text: the bar is
+  // positioned independently, so centring on the text left the gem riding high
+  // and pushed its stroke outside the bar's rounded edge.
+  const gem = rarityGemPlacement({
+    cardWidth: width,
+    pad,
+    gemSize: layout.rarityGemSize,
+    strokeWidth: RARITY_GEM_STROKE,
+    textCenterY: nameMidY,
+    bar: nameplate.showBar
+      ? { top: y - 1, height: plateH + 4, radius: nameplateBarRadius(theme) }
+      : undefined,
+  });
+  const gemR = layout.rarityGemSize / 2;
   if (showHpInNameRow(theme)) {
     drawTrainerHpBadge(
       ctx,
-      gx - hpW - 4,
-      nameMidY - hpBadgeH / 2,
+      gem.left - hpW - 4,
+      gem.centerY - hpBadgeH / 2,
       instance.statHealth,
       layout.statFontSize,
     );
   }
-  const gcy = nameMidY;
+  const gcy = gem.centerY;
   ctx.beginPath();
-  ctx.arc(
-    gx + layout.rarityGemSize / 2,
-    gcy,
-    layout.rarityGemSize / 2,
-    0,
-    Math.PI * 2,
-  );
+  ctx.arc(gem.centerX, gcy, gemR, 0, Math.PI * 2);
   const rg = ctx.createRadialGradient(
-    gx + layout.rarityGemSize / 2,
+    gem.centerX,
     gcy - 2,
     1,
-    gx + layout.rarityGemSize / 2,
+    gem.centerX,
     gcy,
-    layout.rarityGemSize / 2,
+    gemR,
   );
-  rg.addColorStop(0, "#fff8");
-  rg.addColorStop(0.35, rv.primary);
-  rg.addColorStop(1, "#0a0a12");
+  const gemStops = gemGradientStops(rv.primary);
+  rg.addColorStop(0, gemStops.inner);
+  rg.addColorStop(0.5, gemStops.mid);
+  rg.addColorStop(1, gemStops.outer);
   ctx.fillStyle = rg;
   ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.45)";
-  ctx.lineWidth = 1.25;
+  ctx.lineWidth = RARITY_GEM_STROKE;
   ctx.stroke();
   const gemText = rarityGemShort(instance.rarity);
   const gemBase = layout.statFontSize * 0.8;
@@ -502,7 +521,7 @@ export function drawTradingCard(
   ctx.font = canvasFontSans(800, gemFontPx);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(gemText, gx + layout.rarityGemSize / 2, gcy + 0.5);
+  ctx.fillText(gemText, gem.centerX, gcy + 0.5);
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
 
@@ -600,11 +619,8 @@ export function drawTradingCard(
 
   if (instance.abilityText?.trim()) {
     ctx.font = canvasFontSans(500, layout.bodyFontSize);
-    const ab = wrapText(
-      ctx,
-      instance.abilityText,
-      width - textInsetX - pad,
-    );
+    const abilityMaxW = abilityTextMaxWidth(width, pad, textInsetX);
+    const ab = wrapText(ctx, instance.abilityText, abilityMaxW);
     const lineH = layout.bodyFontSize * 1.3;
     const panelPad = 9;
     const rawRoom = roomToBottom();

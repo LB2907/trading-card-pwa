@@ -24,6 +24,7 @@ import { loadUserBlob } from "@/lib/media/storage";
 import { CARD_TEXT_BAND_FLEX_WEIGHT } from "@/lib/compositor/layout-metrics";
 import { CARD_LAYOUT_WIDTH } from "@/lib/compositor/card-resolution";
 import { THEME_DESCRIPTORS } from "@/lib/compositor/theme-descriptors";
+import { gemGradientStops } from "@/lib/compositor/rarity-gem";
 import {
   CREDIT_RAIL_TRACKING,
   creditRailMetrics,
@@ -82,6 +83,7 @@ export function CardDomPreview({
   const roundArt = domPreviewArtRoundedClass(layout);
   const apStyle = abilityPanelStyle(theme);
   const rail = creditRailMetrics(CARD_LAYOUT_WIDTH);
+  const gemStops = gemGradientStops(rv.primary);
   const extraShadow = domPreviewRarityExtraShadow(instance.rarity);
   const shellShadow = extraShadow
     ? `0 22px 48px rgba(0,0,0,0.52), 0 0 0 1px rgba(255,255,255,0.04), ${extraShadow}`
@@ -231,7 +233,7 @@ export function CardDomPreview({
             className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-0.5 font-bold uppercase leading-none text-zinc-950 shadow-[inset_0_-2px_4px_rgba(0,0,0,0.25),0_0_0_1px_rgba(255,255,255,0.25)] ring-1 ring-black/20"
             style={{
               fontSize: gemFontPx,
-              background: `linear-gradient(155deg, ${rv.highlight}, ${rv.primary} 55%, color-mix(in srgb, ${rv.primary} 75%, black))`,
+              background: `radial-gradient(circle at 50% 38%, ${gemStops.inner}, ${gemStops.mid} 50%, ${gemStops.outer})`,
             }}
             aria-hidden
           >
