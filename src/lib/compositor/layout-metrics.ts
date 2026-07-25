@@ -64,3 +64,17 @@ export function abilityTextMaxWidth(
   const leftInset = Math.max(0, textInsetX - pad);
   return Math.max(0, panelRight - leftInset - textInsetX);
 }
+
+/**
+ * Height of a stat pill capsule.
+ *
+ * Single source of truth: `drawStatPill` paints at this height and the layout
+ * advances the cursor by it. They used to disagree (`fontSize + 11` painted vs
+ * `fontSize + 10` advanced), so the ability panel sat 1 px into the pill row.
+ * The padding is also tighter than it was — a 14 px label in a 25 px capsule
+ * read as a heavy band rather than a chip.
+ */
+export function statPillHeight(fontSize: number): number {
+  const fs = Number.isFinite(fontSize) && fontSize > 0 ? fontSize : 14;
+  return fs + 7;
+}

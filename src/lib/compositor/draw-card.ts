@@ -50,6 +50,7 @@ import {
   abilityTextMaxWidth,
   artPanelMetrics,
   cardHeightForWidth,
+  statPillHeight,
 } from "@/lib/compositor/layout-metrics";
 import { THEME_DESCRIPTORS } from "@/lib/compositor/theme-descriptors";
 import {
@@ -122,7 +123,7 @@ function drawStatPill(
   const tw = ctx.measureText(label).width;
   const padX = 11;
   const pw = Math.ceil(tw + padX * 2);
-  const ph = fontSize + 11;
+  const ph = statPillHeight(fontSize);
   const r = ph / 2;
   ctx.beginPath();
   pathRoundRect(ctx, x, y, pw, ph, r);
@@ -552,7 +553,7 @@ export function drawTradingCard(
   y += 12;
 
   const pillY1 = y;
-  const pillH = layout.statFontSize + 10;
+  const pillH = statPillHeight(layout.statFontSize);
   let px = textInsetX;
   px += drawStatPill(
     ctx,
