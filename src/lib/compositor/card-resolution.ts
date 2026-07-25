@@ -71,15 +71,42 @@ export const VIDEO_BITRATE_CEILING = 14_000_000;
 /** Lower bound for tiny/degenerate inputs. */
 const VIDEO_BITRATE_FLOOR = 1_000_000;
 
+export type VideoCodecFamily = "h264" | "vp9" | "vp8";
+
+/**
+ * `VIDEO_BITS_PER_PIXEL` is an H.264 number. VP9 reaches comparable quality on
+ * this content for noticeably fewer bits; VP8 needs more, and under a real-time
+ * `MediaRecorder` constraint it is the codec most likely to be starved.
+ */
+const CODEC_BPP_SCALE: Record<VideoCodecFamily, number> = {
+  h264: 1,
+  vp9: 0.75,
+  vp8: 1.25,
+};
+
+/** Which encoder family a `MediaRecorder` mime type will actually use. */
+export function videoCodecFromMime(mime: string): VideoCodecFamily {
+  const m = mime.toLowerCase();
+  if (m.includes("vp9") || m.includes("vp09")) return "vp9";
+  if (m.includes("vp8")) return "vp8";
+  if (m.includes("avc1") || m.includes("h264") || m.includes("mp4")) {
+    return "h264";
+  }
+  // Bare `video/webm` is VP8 on every engine that reports it.
+  return m.includes("webm") ? "vp8" : "h264";
+}
+
 /** Bitrate to hand `MediaRecorder`, derived from the actual frame size and rate. */
 export function videoBitrateFor(
   width: number,
   height: number,
   fps: number,
+  codec: VideoCodecFamily = "h264",
 ): number {
   const w = Number.isFinite(width) && width > 0 ? width : 0;
   const h = Number.isFinite(height) && height > 0 ? height : 0;
   const f = Number.isFinite(fps) && fps > 0 ? fps : 30;
-  const raw = Math.round(w * h * f * VIDEO_BITS_PER_PIXEL);
+  const bpp = VIDEO_BITS_PER_PIXEL * (CODEC_BPP_SCALE[codec] ?? 1);
+  const raw = Math.round(w * h * f * bpp);
   return Math.min(VIDEO_BITRATE_CEILING, Math.max(VIDEO_BITRATE_FLOOR, raw));
 }

@@ -46,7 +46,10 @@ export async function rasterImageToJpeg(
   }
 }
 
-function seekVideo(video: HTMLVideoElement, time: number): Promise<void> {
+export function seekVideo(
+  video: HTMLVideoElement,
+  time: number,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const finishOk = () => {
       video.removeEventListener("seeked", onSeeked);
@@ -113,7 +116,9 @@ export function waitLoadedMetadata(video: HTMLVideoElement): Promise<void> {
   });
 }
 
-async function waitForPaintedFrame(video: HTMLVideoElement): Promise<void> {
+export async function waitForPaintedFrame(
+  video: HTMLVideoElement,
+): Promise<void> {
   const v = video as HTMLVideoElement & {
     requestVideoFrameCallback?: (
       cb: (now: number, metadata: unknown) => void,
