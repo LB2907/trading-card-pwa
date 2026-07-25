@@ -7,7 +7,10 @@ import {
   cardCanvasSize,
   drawTradingCard,
   type DrawCardOptions,
+  captureLuminanceProbe,
 } from "@/lib/compositor/draw-card";
+import type { LuminanceProbe } from "@/lib/compositor/watermark-ink";
+import { cardHeightForWidth } from "@/lib/compositor/layout-metrics";
 import { ensureCardFontsLoaded } from "@/lib/compositor/canvas-font";
 import { parseLayout } from "@/lib/card-layout";
 import { cardMediaMode, withPlaybackMime } from "@/lib/media/card-media-mode";
@@ -19,6 +22,7 @@ import {
   CARD_GIF_EXPORT_PIXEL_RATIO,
   CARD_LAYOUT_WIDTH,
   CARD_VIDEO_EXPORT_PIXEL_RATIO,
+  videoBitrateFor,
 } from "@/lib/compositor/card-resolution";
 
 const MAX_GIF_FRAMES = 280;
@@ -177,6 +181,7 @@ function drawOptsBase(
   art: CanvasImageSource,
   pixelRatio: number,
   watermarkText?: string,
+  watermarkProbe?: LuminanceProbe,
 ): DrawCardOptions {
   return {
     instance: row.instance,
@@ -185,6 +190,7 @@ function drawOptsBase(
     width: CARD_LAYOUT_WIDTH,
     pixelRatio,
     watermarkText,
+    watermarkProbe,
   };
 }
 
@@ -219,6 +225,10 @@ export async function buildCompositedCardGifBlob(
   const gif = GIFEncoder();
   let frameIndex = 0;
 
+  // Measured once on frame 0 and held: a per-frame probe makes watermark tiles
+  // near the light/dark threshold flip tone between frames.
+  let sharedProbe: LuminanceProbe | undefined;
+
   const encodeOne = (art: CanvasImageSource, delayMs: number, isFirst: boolean) => {
     drawTradingCard(
       ctx,
@@ -228,7 +238,13 @@ export async function buildCompositedCardGifBlob(
         art,
         CARD_GIF_EXPORT_PIXEL_RATIO,
         opts?.watermarkText,
+        sharedProbe,
       ),
+    );
+    sharedProbe ??= captureLuminanceProbe(
+      ctx,
+      CARD_LAYOUT_WIDTH,
+      cardHeightForWidth(CARD_LAYOUT_WIDTH),
     );
     const { data } = ctx.getImageData(0, 0, bufW, bufH);
     const palette = quantize(data, 256);
@@ -342,7 +358,8 @@ export async function buildCompositedCardVideoBlob(
     throw new Error("Canvas unsupported");
   }
 
-  const canvasStream = canvas.captureStream(30);
+  const captureFps = 30;
+  const canvasStream = canvas.captureStream(captureFps);
   const canvasVideoTrack = canvasStream.getVideoTracks()[0];
   if (!canvasVideoTrack) {
     URL.revokeObjectURL(url);
@@ -380,7 +397,7 @@ export async function buildCompositedCardVideoBlob(
 
   const recOptions = (mime: string, withAudio: boolean): MediaRecorderOptions => ({
     mimeType: mime,
-    videoBitsPerSecond: 4_000_000,
+    videoBitsPerSecond: videoBitrateFor(bufW, bufH, captureFps),
     ...(withAudio ? { audioBitsPerSecond: 128_000 } : {}),
   });
 
@@ -438,6 +455,7 @@ export async function buildCompositedCardVideoBlob(
       rec.onstop = () => done();
 
       const t0 = performance.now();
+      let sharedProbe: LuminanceProbe | undefined;
       const pump = () => {
         drawTradingCard(
           ctx,
@@ -447,7 +465,13 @@ export async function buildCompositedCardVideoBlob(
             video,
             CARD_VIDEO_EXPORT_PIXEL_RATIO,
             opts?.watermarkText,
+            sharedProbe,
           ),
+        );
+        sharedProbe ??= captureLuminanceProbe(
+          ctx,
+          CARD_LAYOUT_WIDTH,
+          cardHeightForWidth(CARD_LAYOUT_WIDTH),
         );
         if (video.ended) {
           video.pause();

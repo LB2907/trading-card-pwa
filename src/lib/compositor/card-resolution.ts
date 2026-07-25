@@ -53,3 +53,33 @@ export function previewPixelRatio(): number {
   const rounded = Math.round(d);
   return Math.min(4, Math.max(2, rounded));
 }
+
+/**
+ * Target encoding density in bits per pixel per frame.
+ *
+ * Card video is unusually hostile to compression — serif text, thin gold
+ * hairlines, foil gradients and a tiled watermark are all high-frequency
+ * detail. The previous fixed 4 Mbps worked out to 0.060 bpp at the current
+ * export size, roughly half what H.264 needs, which is why text went mushy and
+ * the foil banded.
+ */
+export const VIDEO_BITS_PER_PIXEL = 0.12;
+
+/** Upper bound, so a long clip cannot balloon into a file a phone won't share. */
+export const VIDEO_BITRATE_CEILING = 14_000_000;
+
+/** Lower bound for tiny/degenerate inputs. */
+const VIDEO_BITRATE_FLOOR = 1_000_000;
+
+/** Bitrate to hand `MediaRecorder`, derived from the actual frame size and rate. */
+export function videoBitrateFor(
+  width: number,
+  height: number,
+  fps: number,
+): number {
+  const w = Number.isFinite(width) && width > 0 ? width : 0;
+  const h = Number.isFinite(height) && height > 0 ? height : 0;
+  const f = Number.isFinite(fps) && fps > 0 ? fps : 30;
+  const raw = Math.round(w * h * f * VIDEO_BITS_PER_PIXEL);
+  return Math.min(VIDEO_BITRATE_CEILING, Math.max(VIDEO_BITRATE_FLOOR, raw));
+}

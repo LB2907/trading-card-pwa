@@ -85,6 +85,13 @@ export type DrawCardOptions = {
   width: number;
   pixelRatio: number;
   watermarkText?: string;
+  /**
+   * Precomputed luminance probe for the adaptive watermark. Animated exports
+   * pass frame 0's probe for every subsequent frame: re-measuring per frame
+   * costs a `getImageData` readback each time, and makes tiles near the
+   * light/dark threshold flip tone as the art moves.
+   */
+  watermarkProbe?: LuminanceProbe;
 };
 
 function parseHex(hex: string, fallback: string): string {
@@ -281,7 +288,7 @@ export function drawExportWatermarkOnRect(
 }
 
 /** Downsample what is currently on the canvas into a luminance grid. */
-function probeCanvasLuminance(
+export function captureLuminanceProbe(
   ctx: CanvasRenderingContext2D,
   width: number,
   h: number,
@@ -742,7 +749,8 @@ export function drawTradingCard(
     const wmCtx = wmCanvas.getContext("2d");
     if (wmCtx) {
       // Sample the finished card face so each tile can pick a readable tone.
-      const probe = probeCanvasLuminance(ctx, width, h);
+      // Animated exports supply frame 0's probe so the mark cannot flicker.
+      const probe = opt.watermarkProbe ?? captureLuminanceProbe(ctx, width, h);
       wmCtx.setTransform(pr, 0, 0, pr, 0, 0);
       drawExportWatermarkOnRect(wmCtx, width, h, wm, "card", probe);
       ctx.save();
