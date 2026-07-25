@@ -32,6 +32,10 @@ import {
   getCompositedCardVideoExportFormat,
 } from "@/lib/export/card-rendered-media";
 import {
+  estimateCompositedVideoSeconds,
+  formatEstimatedDuration,
+} from "@/lib/export/video-export-estimate";
+import {
   clearExportDirectory,
   getExportDirectoryLabel,
   hydrateExportDirHandleFromStorage,
@@ -99,6 +103,7 @@ export function CollectionBulkExportDialog({ open, onOpenChange, rows }: Props) 
   const [videoFmt, setVideoFmt] = useState<{ ext: "mp4" | "webm" } | null>(
     null,
   );
+  const [videoEta, setVideoEta] = useState<number | null>(null);
   const [kinds, setKinds] = useState<Record<BulkExportKind, boolean>>({
     png: true,
     jpeg: false,
@@ -127,10 +132,30 @@ export function CollectionBulkExportDialog({ open, onOpenChange, rows }: Props) 
     }
   }, [open, refreshDirLabel]);
 
-  const videoArtCount = useMemo(
-    () => rows.filter((r) => cardMediaMode(r.instance) === "video").length,
+  const videoArtPaths = useMemo(
+    () =>
+      rows
+        .filter((r) => cardMediaMode(r.instance) === "video")
+        .map((r) => r.instance.mediaPath),
     [rows],
   );
+  const videoArtCount = videoArtPaths.length;
+
+  // Recording is real-time, so the cost of this batch is the sum of the clips.
+  // Measured only once the user actually asks for video.
+  useEffect(() => {
+    if (!open || !kinds.video || !videoArtCount) {
+      setVideoEta(null);
+      return;
+    }
+    let cancelled = false;
+    void estimateCompositedVideoSeconds(videoArtPaths).then((seconds) => {
+      if (!cancelled) setVideoEta(seconds);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, kinds.video, videoArtCount, videoArtPaths]);
 
   const selectedKinds = (Object.keys(kinds) as BulkExportKind[]).filter(
     (k) => kinds[k],
@@ -302,10 +327,14 @@ export function CollectionBulkExportDialog({ open, onOpenChange, rows }: Props) 
             </div>
           </div>
 
-          {videoArtCount > 2 && kinds.video ? (
+          {videoArtCount > 0 && kinds.video ? (
             <p className="rounded-md border border-amber-900/40 bg-amber-950/25 px-3 py-2 text-[11px] text-amber-100/90">
-              {videoArtCount} cards use video art — composited video export is
-              heavy; consider PNG/JPEG or originals first.
+              {videoArtCount} card{videoArtCount === 1 ? "" : "s"} use video art.
+              Recording runs in real time, so this will take{" "}
+              {videoEta == null
+                ? "roughly as long as the clips themselves"
+                : `${formatEstimatedDuration(videoEta)} of it`}
+              {" "}with this screen open — PNG/JPEG or originals are instant.
             </p>
           ) : null}
 

@@ -24,7 +24,11 @@ import {
   writeToExportDirectory,
 } from "@/lib/export-preferences";
 
-export type { CardExportRow, CardExportOptions } from "@/lib/export/types";
+export type {
+  CardExportRow,
+  CardExportOptions,
+  CardVideoProgress,
+} from "@/lib/export/types";
 import type { CardExportRow, CardExportOptions } from "@/lib/export/types";
 
 function compositedWatermarkText(opts?: CardExportOptions): string {
@@ -208,6 +212,8 @@ export async function getCompositedCardVideoBlob(
   }
   return buildCompositedCardVideoBlob(row, {
     watermarkText: compositedWatermarkText(opts),
+    onProgress: opts?.onVideoProgress,
+    signal: opts?.signal,
   });
 }
 

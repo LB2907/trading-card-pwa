@@ -1,6 +1,11 @@
 import { createCanvas, Image } from "@napi-rs/canvas";
-import { describe, expect, it } from "vitest";
-import { captureLuminanceProbe, drawTradingCard, cardCanvasSize } from "@/lib/compositor/draw-card";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  captureLuminanceProbe,
+  drawTradingCard,
+  cardCanvasSize,
+  resetWatermarkLayerCache,
+} from "@/lib/compositor/draw-card";
 import { buildLuminanceProbe } from "@/lib/compositor/watermark-ink";
 import { CARD_LAYOUT_WIDTH } from "@/lib/compositor/card-resolution";
 import { parseLayout } from "@/lib/card-layout";
@@ -32,21 +37,24 @@ function flatProbe(level: number) {
   return buildLuminanceProbe(d, w, h);
 }
 
-function render(probe?: ReturnType<typeof flatProbe>) {
+function render(
+  probe?: ReturnType<typeof flatProbe>,
+  watermarkText = "@studio",
+) {
   const t = BUILTIN_TEMPLATES[0];
   const { bufW, bufH, cssW } = cardCanvasSize(CARD_LAYOUT_WIDTH, 2);
   const canvas = createCanvas(bufW, bufH);
   const ctx = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
-  drawTradingCard(ctx, {
+  const used = drawTradingCard(ctx, {
     instance: inst(),
     layout: parseLayout(JSON.stringify(t.layout)),
     artImage: {} as unknown as CanvasImageSource,
     width: cssW,
     pixelRatio: 2,
-    watermarkText: "@studio",
+    watermarkText,
     watermarkProbe: probe,
   });
-  return { canvas, ctx, cssW };
+  return { canvas, ctx, cssW, cssH: cssW * (3.5 / 2.5), used };
 }
 
 function hash(buf: Buffer): string {
@@ -56,6 +64,55 @@ function hash(buf: Buffer): string {
 }
 
 describe("watermark probe reuse", () => {
+  beforeEach(() => {
+    resetWatermarkLayerCache();
+  });
+
+  it("returns the probe it inked against, measured before the mark goes on", () => {
+    // The animated exporters keep this value and feed it back. Measuring it
+    // off the finished frame — as the first version of the fix did — folds the
+    // mark's own ink into the measurement, so frame 0 and frame 1 disagree.
+    const clean = render(undefined, "");
+    const preWatermark = captureLuminanceProbe(
+      clean.ctx,
+      clean.cssW,
+      clean.cssH,
+    );
+    const marked = render();
+    expect(marked.used).toBeDefined();
+    expect(Array.from(marked.used!.cells)).toEqual(
+      Array.from(preWatermark!.cells),
+    );
+  });
+
+  it("differs from what a post-composite measurement would have produced", () => {
+    const marked = render();
+    const postWatermark = captureLuminanceProbe(
+      marked.ctx,
+      marked.cssW,
+      marked.cssH,
+    );
+    expect(Array.from(postWatermark!.cells)).not.toEqual(
+      Array.from(marked.used!.cells),
+    );
+  });
+
+  it("is idempotent: feeding the returned probe back reproduces the frame", () => {
+    // This is the invariant every later frame of a video or GIF relies on.
+    const first = render();
+    const replayed = render(first.used as ReturnType<typeof flatProbe>);
+    expect(hash(replayed.canvas.toBuffer("image/png"))).toBe(
+      hash(first.canvas.toBuffer("image/png")),
+    );
+  });
+
+  it("does not serve a cached watermark layer to different mark text", () => {
+    const probe = flatProbe(20);
+    const a = hash(render(probe, "@studio").canvas.toBuffer("image/png"));
+    const b = hash(render(probe, "@other").canvas.toBuffer("image/png"));
+    expect(a).not.toBe(b);
+  });
+
   it("honours a caller-supplied probe instead of re-measuring the frame", () => {
     // A dark card told it is bright must ink dark, differing from the default.
     const forcedBright = hash(render(flatProbe(250)).canvas.toBuffer("image/png"));

@@ -315,6 +315,54 @@ export function captureLuminanceProbe(
   }
 }
 
+type WatermarkLayer = {
+  key: string;
+  probe: LuminanceProbe | undefined;
+  canvas: HTMLCanvasElement;
+};
+
+/**
+ * Single-slot cache for the rasterised watermark.
+ *
+ * Rebuilding it per call meant allocating a full-size RGBA canvas (≈8.9 MB at
+ * the video export size) and re-running the tile loop on every frame of an
+ * animated export. Once the probe is held constant the layer is identical for
+ * the whole export, so one slot keyed on what can change is enough — animated
+ * loops hit it every frame, one-shot still exports miss it exactly once.
+ */
+let watermarkLayer: WatermarkLayer | null = null;
+
+/** Drop the cached layer (tests, and anything that swaps canvas backends). */
+export function resetWatermarkLayerCache(): void {
+  watermarkLayer = null;
+}
+
+function watermarkLayerFor(
+  text: string,
+  width: number,
+  h: number,
+  pixelRatio: number,
+  probe: LuminanceProbe | undefined,
+): HTMLCanvasElement | null {
+  const bufW = Math.max(1, Math.round(width * pixelRatio));
+  const bufH = Math.max(1, Math.round(h * pixelRatio));
+  const key = `${text}|${bufW}x${bufH}`;
+  // Probe compared by identity: animated exports thread one object through
+  // every frame, while a still export computes a fresh one and so misses.
+  if (watermarkLayer?.key === key && watermarkLayer.probe === probe) {
+    return watermarkLayer.canvas;
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = bufW;
+  canvas.height = bufH;
+  const wmCtx = canvas.getContext("2d");
+  if (!wmCtx) return null;
+  wmCtx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  drawExportWatermarkOnRect(wmCtx, width, h, text, "card", probe);
+  watermarkLayer = { key, probe, canvas };
+  return canvas;
+}
+
 /**
  * The bottom rail: a hairline plus one small tracked line of credit text,
  * pinned to the base of the card. Colour comes from the theme's type-line ink
@@ -367,11 +415,19 @@ function drawCreditRail(
   ctx.restore();
 }
 
-/** Draws one card to a 2D context (top-left origin). */
+/**
+ * Draws one card to a 2D context (top-left origin).
+ *
+ * Returns the luminance probe the watermark was inked against — measured
+ * *before* the mark is composited. Animated exports must keep this value and
+ * feed it back through `watermarkProbe` on every later frame: re-measuring per
+ * frame is both a GPU→CPU readback and a source of tone flicker, and measuring
+ * after the composite reads the mark's own ink back into the measurement.
+ */
 export function drawTradingCard(
   ctx: CanvasRenderingContext2D,
   opt: DrawCardOptions,
-): void {
+): LuminanceProbe | undefined {
   const { instance, layout, artImage, width, pixelRatio, watermarkText } = opt;
   const h = cardHeightForWidth(width);
   ctx.save();
@@ -741,31 +797,26 @@ export function drawTradingCard(
   ctx.restore();
 
   const wm = (watermarkText ?? "").trim();
+  let usedProbe = opt.watermarkProbe;
   if (wm) {
     const pr =
       Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
-    const bufW = Math.max(1, Math.round(width * pr));
-    const bufH = Math.max(1, Math.round(h * pr));
-    const wmCanvas = document.createElement("canvas");
-    wmCanvas.width = bufW;
-    wmCanvas.height = bufH;
-    const wmCtx = wmCanvas.getContext("2d");
-    if (wmCtx) {
-      // Sample the finished card face so each tile can pick a readable tone.
-      // Animated exports supply frame 0's probe so the mark cannot flicker.
-      const probe = opt.watermarkProbe ?? captureLuminanceProbe(ctx, width, h);
-      wmCtx.setTransform(pr, 0, 0, pr, 0, 0);
-      drawExportWatermarkOnRect(wmCtx, width, h, wm, "card", probe);
+    // Sample the finished card face — but before the mark goes on, so each
+    // tile picks its tone from the art rather than from earlier watermark ink.
+    usedProbe = opt.watermarkProbe ?? captureLuminanceProbe(ctx, width, h);
+    const layer = watermarkLayerFor(wm, width, h, pr, usedProbe);
+    if (layer) {
       ctx.save();
       ctx.beginPath();
       pathRoundRect(ctx, 0, 0, width, h, outerR);
       ctx.clip();
-      ctx.drawImage(wmCanvas, 0, 0, bufW, bufH, 0, 0, width, h);
+      ctx.drawImage(layer, 0, 0, layer.width, layer.height, 0, 0, width, h);
       ctx.restore();
     }
   }
 
   ctx.restore();
+  return usedProbe;
 }
 
 export function cardCanvasSize(width: number, pixelRatio: number) {

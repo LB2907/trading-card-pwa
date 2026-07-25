@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useModalA11y } from "@/hooks/use-modal-a11y";
-import type { CardExportOptions, CardExportRow } from "@/lib/export-card-download";
+import type {
+  CardExportOptions,
+  CardExportRow,
+  CardVideoProgress,
+} from "@/lib/export-card-download";
 import {
   downloadCompositedCardGif,
   downloadCompositedCardJpeg,
@@ -15,6 +19,7 @@ import {
 } from "@/lib/export-card-download";
 import {
   canvasSupportsWebpExport,
+  CardVideoExportAborted,
   getCompositedCardVideoExportFormat,
 } from "@/lib/export/card-rendered-media";
 import { cardMediaMode } from "@/lib/media/card-media-mode";
@@ -38,6 +43,27 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+
+function formatSeconds(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+/**
+ * Recording is bound to wall clock, so the remaining time is simply the
+ * remaining clip. Worth stating plainly rather than showing a bare spinner for
+ * what can be several minutes.
+ */
+function videoProgressLabel(p: CardVideoProgress): string {
+  if (p.fraction == null || p.totalMs == null) {
+    return `Recording… ${formatSeconds(p.elapsedMs)} elapsed`;
+  }
+  const pct = Math.round(p.fraction * 100);
+  const left = Math.max(0, p.totalMs - p.fraction * p.totalMs);
+  return `Recording ${pct}% · about ${formatSeconds(left)} left`;
+}
 
 function canShareFiles(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -71,6 +97,10 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
     return opts;
   }, [omitWatermark, resolution]);
   const [webpOk, setWebpOk] = useState(false);
+  const [videoProgress, setVideoProgress] = useState<CardVideoProgress | null>(
+    null,
+  );
+  const videoAbortRef = useRef<AbortController | null>(null);
   const [videoFmt, setVideoFmt] = useState<{ ext: "mp4" | "webm" } | null>(
     null,
   );
@@ -107,6 +137,35 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
     } catch (e) {
       setNote(e instanceof Error ? e.message : String(e));
     } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runVideo() {
+    primeExportFolderWriteFromUserGesture();
+    const controller = new AbortController();
+    videoAbortRef.current = controller;
+    setBusy(true);
+    setNote(null);
+    setVideoProgress({ fraction: 0, elapsedMs: 0, totalMs: null });
+    try {
+      await downloadCompositedCardVideo(row, {
+        ...compositedOpts,
+        onVideoProgress: setVideoProgress,
+        signal: controller.signal,
+      });
+      setNote("Video download started.");
+    } catch (e) {
+      setNote(
+        e instanceof CardVideoExportAborted
+          ? "Video export cancelled."
+          : e instanceof Error
+            ? e.message
+            : String(e),
+      );
+    } finally {
+      videoAbortRef.current = null;
+      setVideoProgress(null);
       setBusy(false);
     }
   }
@@ -278,16 +337,57 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                     variant="secondary"
                     className="w-full"
                     disabled={busy}
-                    onClick={() =>
-                      void run("Video download", () =>
-                        downloadCompositedCardVideo(row, compositedOpts),
-                      )
-                    }
+                    onClick={() => void runVideo()}
                   >
                     {videoFmt.ext === "mp4"
                       ? "MP4 video (card + motion — iPhone-friendly)"
                       : "WebM video (card + motion)"}
                   </Button>
+                ) : null}
+                {videoProgress ? (
+                  <div className="space-y-2 rounded-md border border-border/80 bg-muted/20 px-3 py-2.5">
+                    <div
+                      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={
+                        videoProgress.fraction == null
+                          ? undefined
+                          : Math.round(videoProgress.fraction * 100)
+                      }
+                      aria-label="Video export progress"
+                    >
+                      <div
+                        className="h-full rounded-full bg-[var(--tc-accent)] transition-[width] duration-200"
+                        style={{
+                          width: `${Math.round((videoProgress.fraction ?? 0) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <p
+                        className="text-[11px] leading-snug text-muted-foreground"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        {videoProgressLabel(videoProgress)}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 shrink-0 px-2 text-[11px]"
+                        onClick={() => videoAbortRef.current?.abort()}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    <p className="text-[11px] leading-snug text-muted-foreground">
+                      Recording happens in real time — keep this screen open.
+                      Locking the phone pauses it rather than spoiling the clip.
+                    </p>
+                  </div>
                 ) : null}
                 {artIsVideo && !videoFmt ? (
                   <p className="rounded-md border border-amber-900/40 bg-amber-950/20 px-3 py-2 text-center text-[11px] text-amber-200/90">
