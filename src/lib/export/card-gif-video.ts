@@ -1,24 +1,37 @@
 "use client";
 
 /**
- * Records a GIF-art card as MP4/WebM.
+ * Encodes a GIF-art card to MP4/WebM via WebCodecs.
  *
  * Worth having because X transcodes every uploaded GIF to silent MP4 anyway,
  * and its video limits are far looser than its GIF ones (512 MB / 140 s for a
- * free account, against 15 MB / 30 s for a GIF). Sending a GIF to X therefore
- * means squeezing a worse-looking file through a much tighter limit to reach
- * the same destination.
+ * free account, against 15 MB / 30 s for a GIF). Discord is the opposite — it
+ * autoplays and loops GIFs inline but shows a play button for video — so this
+ * complements the GIF export rather than replacing it.
  *
- * Discord is the opposite — it autoplays and loops GIFs inline but shows a play
- * button for video — so this complements the GIF export rather than replacing
- * it. See `gif-platform-limits`.
+ * ## Why not MediaRecorder
  *
- * `MediaRecorder` timestamps by wall clock, so this plays the animation in real
- * time and paints as it goes. Frames are composited just-in-time and released,
- * keeping memory flat: pre-rendering a 280-frame card at video resolution would
- * be about 2.5 GB of RGBA.
+ * The first implementation drove `MediaRecorder` from `canvas.captureStream(0)`
+ * plus `requestFrame()`, playing the animation against the wall clock. It lost
+ * almost every frame. A real 5.285 s export contained **ten** frames, with
+ * durations of 32, 40, 42, 132, 122, 125, 123, 1112, 2 and 3557 ms — smooth for
+ * half a second, then two long freezes. `MediaRecorder` samples a live canvas in
+ * real time and silently drops whatever the pipeline cannot keep up with, and at
+ * 1260×1764 with GIF decoding and card compositing on the same thread it kept up
+ * with about 2 fps. No amount of timing care fixes that; the frames never reach
+ * the encoder.
+ *
+ * `VideoEncoder` takes frames with explicit timestamps and durations, so the
+ * output has exactly the frames handed to it, for exactly the intended time,
+ * with no realtime constraint — and it runs faster than realtime rather than
+ * making the user wait out the clip.
  */
 
+import { Muxer as Mp4Muxer, ArrayBufferTarget as Mp4Target } from "mp4-muxer";
+import {
+  Muxer as WebmMuxer,
+  ArrayBufferTarget as WebmTarget,
+} from "webm-muxer";
 import { cardCanvasSize, drawTradingCard } from "@/lib/compositor/draw-card";
 import type { LuminanceProbe } from "@/lib/compositor/watermark-ink";
 import { ensureCardFontsLoaded } from "@/lib/compositor/canvas-font";
@@ -27,7 +40,6 @@ import {
   CARD_LAYOUT_WIDTH,
   CARD_VIDEO_EXPORT_PIXEL_RATIO,
   videoBitrateFor,
-  videoCodecFromMime,
 } from "@/lib/compositor/card-resolution";
 import { cardMediaMode, withPlaybackMime } from "@/lib/media/card-media-mode";
 import { loadUserBlob } from "@/lib/media/storage";
@@ -39,13 +51,18 @@ import {
   type GifVideoPlan,
 } from "@/lib/export/gif-video-plan";
 import {
-  openCanvasCapture,
-  pickCardVideoRecorderMime,
-  CardVideoExportAborted,
-} from "@/lib/export/card-rendered-media";
+  evenDimension,
+  hasVideoEncoder,
+  pickGifVideoCodec,
+  type GifVideoCodec,
+} from "@/lib/export/gif-video-codec";
+import { CardVideoExportAborted } from "@/lib/export/card-rendered-media";
 
-/** Chunk size handed to `MediaRecorder.start`. */
-const RECORDER_TIMESLICE_MS = 1000;
+/** Keyframe cadence. Frequent enough that scrubbing and looping stay snappy. */
+const KEYFRAME_INTERVAL = 30;
+
+/** Cap on frames queued in the encoder before we let it drain. */
+const MAX_ENCODE_QUEUE = 8;
 
 export type CardGifVideoOptions = {
   watermarkText?: string;
@@ -59,30 +76,41 @@ export type CardGifVideoResult = {
   plan: GifVideoPlan;
   width: number;
   height: number;
+  /** Frames actually handed to the encoder. */
+  frames: number;
+  codec: string;
 };
 
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  if (ms <= 0) return Promise.resolve();
-  return new Promise((resolve) => {
-    const t = window.setTimeout(done, ms);
-    function done() {
-      window.clearTimeout(t);
-      signal?.removeEventListener("abort", done);
-      resolve();
-    }
-    signal?.addEventListener("abort", done);
-  });
+function nextTick(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-/** Is video export available for this card at all? */
-export function canExportGifCardVideo(row: CardExportRow): boolean {
+/** Dimensions the encoder will accept for a card at the given pixel ratio. */
+export function gifVideoDimensions(pixelRatio = CARD_VIDEO_EXPORT_PIXEL_RATIO): {
+  width: number;
+  height: number;
+} {
+  const { bufW, bufH } = cardCanvasSize(CARD_LAYOUT_WIDTH, pixelRatio);
+  return { width: evenDimension(bufW), height: evenDimension(bufH) };
+}
+
+/**
+ * Whether this card can be exported as video here. Async because codec support
+ * has to be asked for rather than assumed.
+ */
+export async function canExportGifCardVideo(
+  row: CardExportRow,
+): Promise<boolean> {
   if (cardMediaMode(row.instance) !== "gif") return false;
-  try {
-    pickCardVideoRecorderMime({ includeAudio: false });
-    return true;
-  } catch {
-    return false;
-  }
+  if (!hasVideoEncoder()) return false;
+  const { width, height } = gifVideoDimensions();
+  const codec = await pickGifVideoCodec({
+    width,
+    height,
+    framerate: 30,
+    bitrate: videoBitrateFor(width, height, 30),
+  });
+  return codec !== null;
 }
 
 export async function buildCompositedGifCardVideoBlob(
@@ -98,6 +126,11 @@ export async function buildCompositedGifCardVideoBlob(
   if (cardMediaMode(row.instance) !== "gif") {
     throw new Error("This export only works when the card art is a GIF.");
   }
+  if (!hasVideoEncoder()) {
+    throw new Error(
+      "This browser cannot encode video (WebCodecs VideoEncoder is unavailable). Try an up-to-date Chrome, Edge or Safari.",
+    );
+  }
   await ensureCardFontsLoaded();
 
   const rawBlob = await loadUserBlob(row.instance.mediaPath);
@@ -110,17 +143,26 @@ export async function buildCompositedGifCardVideoBlob(
   throwIfAborted();
 
   const plan = planGifVideo(delaysMs);
-  const { bufW, bufH } = cardCanvasSize(
-    CARD_LAYOUT_WIDTH,
-    CARD_VIDEO_EXPORT_PIXEL_RATIO,
-  );
-  if (!Number.isFinite(bufW) || bufW < 1 || !Number.isFinite(bufH) || bufH < 1) {
-    throw new Error("Invalid export dimensions.");
+  const { width, height } = gifVideoDimensions();
+  const framerate = captureFpsForDelays(delaysMs);
+  const bitrate = videoBitrateFor(width, height, framerate);
+
+  const codec: GifVideoCodec | null = await pickGifVideoCodec({
+    width,
+    height,
+    framerate,
+    bitrate,
+  });
+  if (!codec) {
+    throw new Error(
+      "This browser has no video encoder that can handle a full-size card. Export the GIF instead.",
+    );
   }
+  throwIfAborted();
 
   const canvas = document.createElement("canvas");
-  canvas.width = bufW;
-  canvas.height = bufH;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas unsupported");
 
@@ -143,146 +185,119 @@ export async function buildCompositedGifCardVideoBlob(
     sharedProbe ??= probe;
   };
 
-  const fps = captureFpsForDelays(delaysMs);
-  const recMime = pickCardVideoRecorderMime({ includeAudio: false });
-  const capture = openCanvasCapture(canvas, fps);
-  let recorder: MediaRecorder | null = null;
+  const mp4Target = codec.container === "mp4" ? new Mp4Target() : null;
+  const webmTarget = codec.container === "webm" ? new WebmTarget() : null;
+  const muxer =
+    codec.container === "mp4"
+      ? new Mp4Muxer({
+          target: mp4Target!,
+          video: { codec: "avc", width, height },
+          // Everything is in memory anyway, and it puts the index up front so
+          // the file streams and previews properly.
+          fastStart: "in-memory",
+        })
+      : new WebmMuxer({
+          target: webmTarget!,
+          video: {
+            codec: codec.muxerCodec === "vp9" ? "V_VP9" : "V_VP8",
+            width,
+            height,
+          },
+        });
 
-  const teardown = () => {
-    if (recorder && recorder.state !== "inactive") {
+  let encoderError: Error | null = null;
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => {
       try {
-        recorder.stop();
-      } catch {
-        /* noop */
+        // The two muxers have structurally identical addVideoChunk signatures
+        // but no shared type, so this narrows rather than casts to any.
+        if (codec.container === "mp4") {
+          (muxer as Mp4Muxer<Mp4Target>).addVideoChunk(chunk, meta);
+        } else {
+          (muxer as WebmMuxer<WebmTarget>).addVideoChunk(chunk, meta);
+        }
+      } catch (e) {
+        encoderError ??= e instanceof Error ? e : new Error(String(e));
       }
-    }
-    capture.stream.getTracks().forEach((t) => {
-      try {
-        t.stop();
-      } catch {
-        /* noop */
-      }
-    });
-  };
+    },
+    error: (e) => {
+      encoderError ??= e instanceof Error ? e : new Error(String(e));
+    },
+  });
+  encoder.configure({ codec: codec.codec, width, height, bitrate, framerate });
+
+  const startedAt = performance.now();
+  let encoded = 0;
+  let timestampUs = 0;
 
   try {
-    // Composite frame 0 before the recorder exists, so the clip does not open
-    // on a blank flash of untouched canvas.
-    const firstPass = fullFramesFromGif(parsed, frames);
-    const first = await firstPass.next();
-    if (first.done) throw new Error("This GIF contains no frames.");
-    paintCard(first.value.bitmap);
-    first.value.bitmap.close();
-    await firstPass.return(undefined);
-
-    const chunks: Blob[] = [];
-    recorder = new MediaRecorder(capture.stream, {
-      mimeType: recMime.mime,
-      videoBitsPerSecond: videoBitrateFor(
-        bufW,
-        bufH,
-        fps,
-        videoCodecFromMime(recMime.mime),
-      ),
-    });
-    recorder.ondataavailable = (e) => {
-      if (e.data.size) chunks.push(e.data);
-    };
-    const stopped = new Promise<void>((resolve, reject) => {
-      recorder!.onstop = () => resolve();
-      recorder!.onerror = () => reject(new Error("Recording failed."));
-    });
-
-    /**
-     * A hidden page throttles timers to about once a second, which would stretch
-     * the clip. Park the recorder with it and shift the time base on return, so
-     * the animation resumes at the point it was paused rather than jumping.
-     */
-    let baseline = 0;
-    let targetMs = 0;
-    const onVisibility = () => {
-      if (!recorder) return;
-      if (document.hidden) {
+    for (let loop = 0; loop < plan.loops; loop++) {
+      for await (const { index, bitmap } of fullFramesFromGif(parsed, frames)) {
         try {
-          if (recorder.state === "recording") recorder.pause();
-        } catch {
-          /* noop */
+          throwIfAborted();
+          if (encoderError) throw encoderError;
+          paintCard(bitmap);
+        } finally {
+          bitmap.close();
         }
-        return;
+
+        const durationUs = Math.max(1, Math.round((delaysMs[index] ?? 100) * 1000));
+        const frame = new VideoFrame(canvas, {
+          timestamp: timestampUs,
+          duration: durationUs,
+        });
+        try {
+          encoder.encode(frame, { keyFrame: encoded % KEYFRAME_INTERVAL === 0 });
+        } finally {
+          frame.close();
+        }
+        timestampUs += durationUs;
+        encoded++;
+
+        opts?.onProgress?.({
+          fraction: encoded / plan.frameCount,
+          elapsedMs: performance.now() - startedAt,
+          totalMs: null,
+        });
+
+        // Let the encoder drain rather than queuing the whole animation, which
+        // would hold every pending frame's memory at once.
+        while (encoder.encodeQueueSize > MAX_ENCODE_QUEUE) {
+          await nextTick();
+          throwIfAborted();
+          if (encoderError) throw encoderError;
+        }
       }
-      baseline = performance.now() - targetMs;
+    }
+
+    await encoder.flush();
+    if (encoderError) throw encoderError;
+    muxer.finalize();
+
+    const buffer =
+      codec.container === "mp4" ? mp4Target!.buffer : webmTarget!.buffer;
+    if (!buffer || buffer.byteLength === 0) {
+      throw new Error("Video export produced no data.");
+    }
+    const blob = new Blob([buffer], {
+      type: codec.container === "mp4" ? "video/mp4" : "video/webm",
+    });
+    return {
+      blob,
+      ext: codec.ext,
+      plan,
+      width,
+      height,
+      frames: encoded,
+      codec: codec.codec,
+    };
+  } finally {
+    if (encoder.state !== "closed") {
       try {
-        if (recorder.state === "paused") recorder.resume();
+        encoder.close();
       } catch {
         /* noop */
       }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    try {
-      recorder.start(RECORDER_TIMESLICE_MS);
-      baseline = performance.now();
-      capture.track.requestFrame?.();
-
-      let painted = 0;
-      for (let loop = 0; loop < plan.loops; loop++) {
-        for await (const { index, bitmap } of fullFramesFromGif(
-          parsed,
-          frames,
-        )) {
-          try {
-            throwIfAborted();
-            paintCard(bitmap);
-          } finally {
-            bitmap.close();
-          }
-          if (capture.manual) {
-            try {
-              capture.track.requestFrame?.();
-            } catch {
-              /* noop */
-            }
-          }
-
-          painted++;
-          // Track a cumulative target rather than sleeping the raw delay, so
-          // slow frames borrow from later ones instead of accumulating drift.
-          targetMs += delaysMs[index] ?? 100;
-          opts?.onProgress?.({
-            fraction: painted / plan.frameCount,
-            elapsedMs: performance.now() - baseline,
-            totalMs: plan.totalMs,
-          });
-          await sleep(targetMs - (performance.now() - baseline), signal);
-          throwIfAborted();
-        }
-      }
-    } finally {
-      document.removeEventListener("visibilitychange", onVisibility);
     }
-
-    if (recorder.state !== "inactive") recorder.stop();
-    await stopped;
-
-    const bytes = chunks.reduce((n, c) => n + c.size, 0);
-    if (!chunks.length || bytes === 0) {
-      throw new Error(
-        "Video export produced no data — the recorder stopped before any frames were encoded.",
-      );
-    }
-    const baseMime =
-      recMime.ext === "mp4"
-        ? "video/mp4"
-        : recMime.mime.split(";")[0] || "video/webm";
-    const blob = new Blob(chunks, { type: baseMime });
-    return {
-      blob,
-      ext: blob.type.toLowerCase().includes("mp4") ? "mp4" : recMime.ext,
-      plan,
-      width: bufW,
-      height: bufH,
-    };
-  } finally {
-    teardown();
   }
 }

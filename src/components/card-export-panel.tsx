@@ -123,7 +123,13 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
   useEffect(() => {
     setWebpOk(canvasSupportsWebpExport());
     setVideoFmt(getCompositedCardVideoExportFormat());
-    setGifVideoOk(canExportGifCardVideo(row));
+    let cancelled = false;
+    void canExportGifCardVideo(row).then((ok) => {
+      if (!cancelled) setGifVideoOk(ok);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [row]);
 
   useEffect(() => {
@@ -418,8 +424,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                       </Button>
                     </div>
                     <p className="text-[11px] leading-snug text-muted-foreground">
-                      Recording happens in real time — keep this screen open.
-                      Locking the phone pauses it rather than spoiling the clip.
+                      Keep this screen open until the export finishes.
                     </p>
                   </div>
                 ) : null}
