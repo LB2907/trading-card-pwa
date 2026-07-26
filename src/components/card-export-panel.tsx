@@ -8,7 +8,6 @@ import type {
   CardVideoProgress,
 } from "@/lib/export-card-download";
 import {
-  downloadCompositedCardGif,
   downloadCompositedCardJpeg,
   downloadCompositedCardPng,
   downloadCompositedCardVideo,
@@ -29,9 +28,11 @@ import {
   type ExportResolution,
 } from "@/lib/compositor/card-resolution";
 import {
+  getExportWatermarkText,
   hydrateExportDirHandleFromStorage,
   primeExportFolderWriteFromUserGesture,
 } from "@/lib/export-preferences";
+import { CardGifExportSection } from "@/components/card-gif-export-section";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -97,6 +98,10 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
     return opts;
   }, [omitWatermark, resolution]);
   const [webpOk, setWebpOk] = useState(false);
+  // Read from localStorage on open rather than during render, so the first
+  // paint cannot disagree with the server-rendered markup.
+  const [watermarkBase, setWatermarkBase] = useState("");
+  const [gifBusy, setGifBusy] = useState(false);
   const [videoProgress, setVideoProgress] = useState<CardVideoProgress | null>(
     null,
   );
@@ -107,6 +112,8 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
   const kind = row.instance.mediaKind;
   const shareOk = typeof navigator !== "undefined" && canShareFiles();
   const artIsVideo = cardMediaMode(row.instance) === "video";
+  /** A GIF encode running in the section still blocks the other exports. */
+  const anyBusy = busy || gifBusy;
   const panelRef = useRef<HTMLDivElement>(null);
   useModalA11y(open, () => setOpen(false), panelRef);
 
@@ -118,6 +125,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
   useEffect(() => {
     if (!open) return;
     void hydrateExportDirHandleFromStorage();
+    setWatermarkBase(getExportWatermarkText());
   }, [open]);
 
   const showOriginalDownload =
@@ -174,7 +182,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
     <>
       <Button
         type="button"
-        disabled={busy}
+        disabled={anyBusy}
         className="w-full"
         size="lg"
         onClick={() => {
@@ -219,7 +227,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                   id="card-export-no-watermark"
                   className="mt-0.5"
                   checked={omitWatermark}
-                  disabled={busy}
+                  disabled={anyBusy}
                   onCheckedChange={(v) => setOmitWatermark(v === true)}
                 />
                 <div className="min-w-0 space-y-1">
@@ -250,7 +258,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                           key={key}
                           type="button"
                           aria-pressed={active}
-                          disabled={busy}
+                          disabled={anyBusy}
                           onClick={() => setResolution(key)}
                           className={`flex flex-col items-center gap-0.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors disabled:opacity-50 ${
                             active
@@ -281,7 +289,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                   type="button"
                   className="w-full"
                   size="lg"
-                  disabled={busy}
+                  disabled={anyBusy}
                   onClick={() =>
                     void run("PNG download", () =>
                       downloadCompositedCardPng(row, compositedOpts),
@@ -294,7 +302,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                   <Button
                     type="button"
                     variant="secondary"
-                    disabled={busy}
+                    disabled={anyBusy}
                     onClick={() =>
                       void run("JPEG download", () =>
                         downloadCompositedCardJpeg(row, compositedOpts),
@@ -307,7 +315,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                     <Button
                       type="button"
                       variant="secondary"
-                      disabled={busy}
+                      disabled={anyBusy}
                       onClick={() =>
                         void run("WebP download", () =>
                           downloadCompositedCardWebp(row, compositedOpts),
@@ -317,26 +325,21 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                       WebP
                     </Button>
                   ) : null}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className={webpOk ? "" : "col-span-1"}
-                    disabled={busy}
-                    onClick={() =>
-                      void run("GIF download", () =>
-                        downloadCompositedCardGif(row, compositedOpts),
-                      )
-                    }
-                  >
-                    GIF{kind === "gif" ? " · animated" : " · still"}
-                  </Button>
                 </div>
+                <CardGifExportSection
+                  row={row}
+                  watermarkText={omitWatermark ? "" : watermarkBase}
+                  animated={kind === "gif"}
+                  // Its own encode must not disable its own controls.
+                  disabled={busy}
+                  onBusyChange={setGifBusy}
+                />
                 {artIsVideo && videoFmt ? (
                   <Button
                     type="button"
                     variant="secondary"
                     className="w-full"
-                    disabled={busy}
+                    disabled={anyBusy}
                     onClick={() => void runVideo()}
                   >
                     {videoFmt.ext === "mp4"
@@ -410,7 +413,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                     type="button"
                     variant="outline"
                     className="w-full"
-                    disabled={busy}
+                    disabled={anyBusy}
                     onClick={() =>
                       void run("Original download", () =>
                         downloadOriginalMedia(row),
@@ -431,7 +434,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                       type="button"
                       variant="outline"
                       className="w-full border-[var(--tc-accent)]/40 text-[var(--tc-accent-hover)] hover:bg-[color-mix(in_srgb,var(--tc-accent)_12%,transparent)] hover:text-[var(--tc-accent-hover)]"
-                      disabled={busy}
+                      disabled={anyBusy}
                       onClick={() =>
                         void (async () => {
                           primeExportFolderWriteFromUserGesture();
@@ -464,7 +467,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                         type="button"
                         variant="outline"
                         className="w-full border-[var(--tc-accent)]/40 text-[var(--tc-accent-hover)] hover:bg-[color-mix(in_srgb,var(--tc-accent)_12%,transparent)] hover:text-[var(--tc-accent-hover)]"
-                        disabled={busy}
+                        disabled={anyBusy}
                         onClick={() =>
                           void (async () => {
                             setBusy(true);

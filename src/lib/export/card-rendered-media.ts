@@ -1,8 +1,5 @@
 "use client";
 
-import { GIFEncoder, applyPalette, quantize } from "gifenc";
-import { parseGIF, decompressFrames } from "gifuct-js";
-import type { ParsedGif, ParsedFrame } from "gifuct-js";
 import {
   cardCanvasSize,
   drawTradingCard,
@@ -12,7 +9,6 @@ import type { LuminanceProbe } from "@/lib/compositor/watermark-ink";
 import { ensureCardFontsLoaded } from "@/lib/compositor/canvas-font";
 import { parseLayout } from "@/lib/card-layout";
 import { cardMediaMode, withPlaybackMime } from "@/lib/media/card-media-mode";
-import { loadArtForCompositor } from "@/lib/media/compositor-source";
 import {
   seekVideo,
   waitForPaintedFrame,
@@ -21,7 +17,6 @@ import {
 import { loadUserBlob } from "@/lib/media/storage";
 import type { CardExportRow, CardVideoProgress } from "@/lib/export/types";
 import {
-  CARD_GIF_EXPORT_PIXEL_RATIO,
   CARD_LAYOUT_WIDTH,
   CARD_VIDEO_EXPORT_PIXEL_RATIO,
   videoBitrateFor,
@@ -33,8 +28,7 @@ import {
   normalizeSourceFps,
   type VideoFrameSample,
 } from "@/lib/compositor/video-frame-rate";
-
-const MAX_GIF_FRAMES = 280;
+import { buildCardGif } from "@/lib/export/card-gif-encoder";
 
 /**
  * How long to watch the clip before recording, to learn its real frame rate.
@@ -81,60 +75,6 @@ export class CardVideoExportAborted extends Error {
   constructor() {
     super("Video export cancelled.");
     this.name = "CardVideoExportAborted";
-  }
-}
-
-function rgbFillFromGifBackground(gif: ParsedGif): string {
-  const idx = gif.lsd.backgroundColorIndex ?? 0;
-  const c = gif.gct[idx] ?? [0, 0, 0];
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
-}
-
-/**
- * Walk decoded GIF frames into full logical-screen bitmaps (disposal 1 = cumulative, 2 = clear before draw).
- */
-async function* fullFramesFromGif(
-  gif: ParsedGif,
-  frames: ParsedFrame[],
-): AsyncGenerator<{ delayMs: number; bitmap: ImageBitmap }> {
-  const w = gif.lsd.width;
-  const h = gif.lsd.height;
-  const bg = rgbFillFromGifBackground(gif);
-
-  const acc = document.createElement("canvas");
-  acc.width = w;
-  acc.height = h;
-  const accCtx = acc.getContext("2d", { willReadFrequently: true });
-  if (!accCtx) throw new Error("Canvas unsupported");
-
-  const patchCanvas = document.createElement("canvas");
-  const patchCtx = patchCanvas.getContext("2d");
-  if (!patchCtx) throw new Error("Canvas unsupported");
-
-  accCtx.fillStyle = bg;
-  accCtx.fillRect(0, 0, w, h);
-
-  for (let i = 0; i < frames.length; i++) {
-    const frame = frames[i];
-    if (i > 0) {
-      const prev = frames[i - 1];
-      if (prev.disposalType === 2) {
-        accCtx.fillStyle = bg;
-        accCtx.fillRect(0, 0, w, h);
-      }
-    }
-
-    const d = frame.dims;
-    patchCanvas.width = d.width;
-    patchCanvas.height = d.height;
-    const id = patchCtx.createImageData(d.width, d.height);
-    id.data.set(frame.patch);
-    patchCtx.putImageData(id, 0, 0);
-    accCtx.drawImage(patchCanvas, d.left, d.top);
-
-    const delayMs = Math.max(20, Math.min(frame.delay || 100, 60_000));
-    const bitmap = await createImageBitmap(acc);
-    yield { delayMs, bitmap };
   }
 }
 
@@ -250,96 +190,23 @@ function drawOptsBase(
   };
 }
 
-/** Full card as animated GIF (multi-frame if source is GIF; otherwise one frame). */
+/**
+ * Full card as animated GIF (multi-frame if source is GIF; otherwise one frame).
+ *
+ * Kept as the stable entry point for callers that just want a file at default
+ * quality — bulk export, the zip path. Anything that needs quality control or
+ * progress should call `buildCardGif` directly.
+ */
 export async function buildCompositedCardGifBlob(
   row: CardExportRow,
   opts?: { watermarkText?: string },
 ): Promise<Blob> {
-  await ensureCardFontsLoaded();
-  const rawBlob = await loadUserBlob(row.instance.mediaPath);
-  if (!rawBlob) {
-    throw new Error("Art file missing from local storage — cannot render card.");
-  }
-  const layout = parseLayout(row.layoutJson);
-  const typed = withPlaybackMime(rawBlob, row.instance.mediaPath);
-  const mode = cardMediaMode(row.instance);
-  const { bufW, bufH } = cardCanvasSize(
-    CARD_LAYOUT_WIDTH,
-    CARD_GIF_EXPORT_PIXEL_RATIO,
-  );
-
-  if (!Number.isFinite(bufW) || bufW < 1 || !Number.isFinite(bufH) || bufH < 1) {
-    throw new Error("Invalid export dimensions.");
-  }
-
-  const canvas = document.createElement("canvas");
-  canvas.width = bufW;
-  canvas.height = bufH;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) throw new Error("Canvas unsupported");
-
-  const gif = GIFEncoder();
-  let frameIndex = 0;
-
-  // Measured once on frame 0 and held: a per-frame probe makes watermark tiles
-  // near the light/dark threshold flip tone between frames. `drawTradingCard`
-  // hands back the probe it inked against, taken before the mark is
-  // composited — reading it off the finished frame would fold the mark's own
-  // ink back into the measurement.
-  let sharedProbe: LuminanceProbe | undefined;
-
-  const encodeOne = (art: CanvasImageSource, delayMs: number, isFirst: boolean) => {
-    const probe = drawTradingCard(
-      ctx,
-      drawOptsBase(
-        row,
-        layout,
-        art,
-        CARD_GIF_EXPORT_PIXEL_RATIO,
-        opts?.watermarkText,
-        sharedProbe,
-      ),
-    );
-    sharedProbe ??= probe;
-    const { data } = ctx.getImageData(0, 0, bufW, bufH);
-    const palette = quantize(data, 256);
-    const index = applyPalette(data, palette);
-    gif.writeFrame(index, bufW, bufH, {
-      palette,
-      delay: delayMs,
-      ...(isFirst ? { repeat: 0 } : {}),
-    });
-  };
-
-  if (mode === "gif") {
-    const ab = await typed.arrayBuffer();
-    const parsed = parseGIF(ab);
-    const frames = decompressFrames(parsed, true);
-    if (frames.length > MAX_GIF_FRAMES) {
-      throw new Error(
-        `This GIF has ${frames.length} frames (max ${MAX_GIF_FRAMES}). Use video export for long clips, or trim the GIF.`,
-      );
-    }
-    for await (const { delayMs, bitmap } of fullFramesFromGif(parsed, frames)) {
-      try {
-        encodeOne(bitmap, delayMs, frameIndex === 0);
-        frameIndex++;
-      } finally {
-        bitmap.close();
-      }
-    }
-  } else {
-    const { source, dispose } = await loadArtForCompositor(typed, row.instance);
-    try {
-      encodeOne(source, 100, true);
-    } finally {
-      dispose();
-    }
-  }
-
-  gif.finish();
-  const raw = gif.bytes();
-  return new Blob([raw.slice()], { type: "image/gif" });
+  const result = await buildCardGif(row, {
+    ...(opts?.watermarkText !== undefined
+      ? { watermarkText: opts.watermarkText }
+      : {}),
+  });
+  return result.blob;
 }
 
 /**

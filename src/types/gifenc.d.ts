@@ -26,6 +26,10 @@ declare module "gifenc" {
         transparent?: boolean;
         transparentIndex?: number;
         first?: boolean;
+        /** LZW minimum code size; also the logical-screen color depth. */
+        colorDepth?: number;
+        /** GIF disposal method. 1 = leave the frame in place. -1 = unspecified. */
+        dispose?: number;
       },
     ): void;
     finish(): void;
