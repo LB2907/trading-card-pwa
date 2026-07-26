@@ -50,6 +50,11 @@ import { loadUserBlob } from "@/lib/media/storage";
 import type { CardExportRow, CardVideoProgress } from "@/lib/export/types";
 import { evenDimension } from "@/lib/export/gif-video-codec";
 import { CardVideoExportAborted } from "@/lib/export/card-rendered-media";
+import {
+  exportTimelineOrigin,
+  exportedDuration,
+  rebaseToOrigin,
+} from "@/lib/export/video-timeline";
 
 /** Key frames every couple of seconds keeps seeking responsive. */
 const KEY_FRAME_INTERVAL_S = 2;
@@ -182,7 +187,15 @@ export async function buildCompositedVideoCardBlob(
   if (audioTrack) {
     sourceAudioCodec = await audioTrack.getCodec();
     const supported = output.format.getSupportedCodecs();
-    if (sourceAudioCodec && supported.includes(sourceAudioCodec)) {
+    // A track starting before zero has a lead-in that is not meant to be
+    // presented, and encoded packets cannot be trimmed without decoding them,
+    // so that case has to go the re-encode route however well the codec fits.
+    const startsBeforeZero = (await audioTrack.getFirstTimestamp()) < 0;
+    if (
+      sourceAudioCodec &&
+      supported.includes(sourceAudioCodec) &&
+      !startsBeforeZero
+    ) {
       // Copy the encoded packets straight across: no quality loss, no cost.
       packetAudio = new EncodedAudioPacketSource(sourceAudioCodec);
       output.addAudioTrack(packetAudio);
@@ -197,28 +210,44 @@ export async function buildCompositedVideoCardBlob(
     }
   }
 
+  // One origin shared by every muxed track: rebasing video and audio by
+  // different amounts would slide them out of sync.
+  const origin = exportTimelineOrigin(
+    await input.getFirstTimestamp(
+      audioTrack && audioMode !== "none"
+        ? [videoTrack, audioTrack]
+        : [videoTrack],
+    ),
+  );
+  const exportSeconds = exportedDuration(totalSeconds, origin);
+
   await output.start();
 
   let frames = 0;
   const startedAt = performance.now();
   try {
     const sink = new VideoSampleSink(videoTrack);
-    for await (const sample of sink.samples()) {
+    // Starting the sink at the origin skips a lead-in that is not meant to be
+    // presented. It still yields the one frame straddling the origin, so a
+    // partially visible frame is kept rather than dropped.
+    for await (const sample of sink.samples(origin)) {
+      const timestamp = rebaseToOrigin(sample.timestamp, origin);
+      const duration = sample.duration;
       try {
         throwIfAborted();
         // `toCanvasImageSource` hands back a VideoFrame or OffscreenCanvas;
         // `intrinsicArtSize` measures both, so the art is drawn without an
         // intermediate copy.
         paintCard(sample.toCanvasImageSource());
-        await videoSource.add(sample.timestamp, sample.duration);
+        await videoSource.add(timestamp, duration);
       } finally {
         sample.close();
       }
       frames++;
       opts?.onProgress?.({
         fraction:
-          totalSeconds > 0
-            ? Math.min(1, (sample.timestamp + sample.duration) / totalSeconds)
+          exportSeconds > 0
+            ? Math.min(1, (timestamp + duration) / exportSeconds)
             : null,
         elapsedMs: performance.now() - startedAt,
         totalMs: null,
@@ -233,12 +262,19 @@ export async function buildCompositedVideoCardBlob(
       const packetSink = new EncodedPacketSink(audioTrack);
       for await (const packet of packetSink.packets()) {
         throwIfAborted();
-        await packetAudio.add(packet, meta);
+        // Passthrough is only chosen for tracks that start at or after zero, so
+        // this shift cannot go negative.
+        await packetAudio.add(
+          packet.clone({ timestamp: rebaseToOrigin(packet.timestamp, origin) }),
+          meta,
+        );
       }
       packetAudio.close();
     } else if (bufferAudio && audioTrack) {
       const bufferSink = new AudioBufferSink(audioTrack);
-      for await (const { buffer } of bufferSink.buffers()) {
+      // `AudioBufferSource` lays buffers down from zero in arrival order, so the
+      // rebasing here is the sink's start bound rather than a per-sample shift.
+      for await (const { buffer } of bufferSink.buffers(origin)) {
         throwIfAborted();
         await bufferAudio.add(buffer);
       }
