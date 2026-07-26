@@ -9,7 +9,7 @@ Covers three encoders:
 |---|---|---|---|
 | GIF | GIF art, or one still frame | `gifenc` + own palette/differencing | Working |
 | GIF card → video | GIF art | WebCodecs `VideoEncoder` + muxer | Working |
-| Video card → video | video art | `MediaRecorder` (realtime) | **Suspect — see below** |
+| Video card → video | video art | mediabunny (demux → decode → encode → mux) | Working |
 
 ---
 
@@ -78,7 +78,43 @@ exist that expose `VideoEncoder` with AVC unsupported and VP8/VP9 fine.
 
 ---
 
-## Still on MediaRecorder: the video-art card export
+## The video-art card export (now on mediabunny)
+
+Rewritten to demux → decode → composite → encode → mux via `mediabunny`, with
+`MediaRecorder` kept only as a fallback where WebCodecs is missing.
+
+Measured end to end against generated source clips (H.264 video + AAC audio):
+
+| Source | Frames out | Duration | Audio | Time |
+|---|---|---|---|---|
+| 60 frames / 2 s | 60/60 | 2005 ms exact | passthrough | 3121 ms |
+| 150 frames / 5 s | 150/150 | 5013 ms exact | passthrough | 6952 ms |
+| 60 frames / 2 s, silent | 60/60 | 2000 ms exact | none | 2985 ms |
+
+**The speed win is modest — roughly 15–20 %**, not the large gain the realtime
+framing suggested. Per second of source: `MediaRecorder` ≈ 1678 ms, mediabunny
+≈ 1390 ms. The realtime constraint was never the dominant cost; **card
+compositing is**, at roughly 40 ms per frame at 1260×1764.
+
+The wins that are unambiguous:
+
+- **Exact frame count and duration**, guaranteed rather than best-effort.
+- **Audio passthrough** — encoded packets are copied across untouched, so no
+  generational loss. The old path re-encoded through Web Audio and also upmixed
+  a mono source to stereo; the new one preserves the original channel count.
+- **No dependence on playback.** No autoplay, `requestVideoFrameCallback`,
+  visibility-pause or wall-clock handling, so a backgrounded tab is fine.
+
+### The real speed lever, not yet taken
+
+Compositing dominates, and **the card chrome is identical on every frame**.
+Rendering the chrome once to an offscreen canvas and per frame drawing only
+`art + cached chrome overlay` — rather than re-running the whole of
+`drawTradingCard` — should cut the dominant cost substantially. It would speed up
+the GIF export by the same mechanism. Not attempted yet; it needs
+`drawTradingCard` split into "chrome" and "art window" passes.
+
+## Historical: what MediaRecorder did here
 
 `buildCompositedCardVideoBlob` (video art → video) uses the same realtime
 `MediaRecorder` architecture, plus a `requestVideoFrameCallback` /
@@ -92,11 +128,15 @@ colour:
 | 60 frames @ 30 fps (2000 ms) | 1950 ms | **1** | 3820 ms |
 | 90 frames @ 30 fps (3000 ms) | 2949 ms | **1** | 4756 ms |
 
-**Treat the frame count as inconclusive.** That export pumps via
+**That frame count was an artifact, now confirmed.** The export pumps via
 `requestVideoFrameCallback`/`requestAnimationFrame`, which need a compositing
-page, and the agent browser pane does not composite — so the pump likely never
-fired and only the initial frame survived. This is not proof the export is
-broken on a real device.
+page, and the agent browser pane does not composite — so the pump never fired
+and only the initial frame survived. Hand-checked on a real device on
+2026-07-26: **video cards do not stutter.** The frame-loss that ruined the GIF
+path does not occur here, because playback-driven pumping keeps the main thread
+free in a way the GIF path's tight decode/composite loop did not.
+
+The remaining problem is therefore speed, not correctness.
 
 What the numbers *do* support, independent of the confound:
 
@@ -105,14 +145,7 @@ What the numbers *do* support, independent of the confound:
 - It inherits the architecture that demonstrably dropped ~80 % of frames in the
   GIF path, and adds a display-driven pump the GIF path did not have.
 
-A WebCodecs rewrite would very likely make it both faster and more reliable. The
-extra work over the GIF path is **audio**: the current export taps the source
-clip's audio through Web Audio and lets `MediaRecorder` mux it. WebCodecs needs
-`AudioEncoder` plus an audio track in the muxer (both `mp4-muxer` and
-`webm-muxer` support this), and the source audio has to be decoded first.
-
-To settle it properly, test on a real device with a real video card before
-committing to the rewrite.
+Kept as the fallback for browsers without WebCodecs, since it does work.
 
 ---
 
@@ -139,6 +172,9 @@ Two traps worth knowing:
    `drawTradingCard` a plain `<canvas>` and it silently draws no art, so every
    frame comes out identical and the probe reports frame loss that is not there.
    This wasted a debugging cycle; check the art is actually visible first.
+   `intrinsicArtSize` now also measures `VideoFrame`, `OffscreenCanvas` and
+   `HTMLCanvasElement`, so the WebCodecs paths can hand decoded frames straight
+   through — but anything not on that list still silently draws nothing.
 2. **Encode the frame index with wide steps.** H.264 shifts the red channel by
    several counts (limited vs full range), so a small step decodes to the wrong
    index and invents frames that were never sent. Steps of ~18 survive; steps of

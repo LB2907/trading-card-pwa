@@ -13,6 +13,10 @@ import {
   canvasSupportsWebpExport,
 } from "@/lib/export/card-rendered-media";
 import { buildCompositedGifCardVideoBlob } from "@/lib/export/card-gif-video";
+import {
+  buildCompositedVideoCardBlob,
+  canEncodeVideoCard,
+} from "@/lib/export/card-video-encoder";
 import { loadArtForCompositor } from "@/lib/media/compositor-source";
 import {
   extensionFromMediaPath,
@@ -201,10 +205,24 @@ export async function downloadCompositedCardGif(
  * Full card as video: MP4 when the browser supports it (typical on Safari / iPhone),
  * otherwise WebM. Filename matches the container.
  */
+/**
+ * Prefers the WebCodecs encoder, which decodes and encodes as fast as the
+ * machine allows instead of playing the clip through in real time. Falls back to
+ * the `MediaRecorder` recorder where WebCodecs is missing — that path is slower
+ * but does work, so it is worth keeping rather than refusing the export.
+ */
 export async function getCompositedCardVideoBlob(
   row: CardExportRow,
   opts?: CardExportOptions,
 ): Promise<Blob> {
+  if (await canEncodeVideoCard(row)) {
+    const result = await buildCompositedVideoCardBlob(row, {
+      watermarkText: compositedWatermarkText(opts),
+      ...(opts?.onVideoProgress ? { onProgress: opts.onVideoProgress } : {}),
+      ...(opts?.signal ? { signal: opts.signal } : {}),
+    });
+    return result.blob;
+  }
   const fmt = getCompositedCardVideoExportFormat();
   if (!fmt) {
     throw new Error(
@@ -222,15 +240,14 @@ export async function downloadCompositedCardVideo(
   row: CardExportRow,
   opts?: CardExportOptions,
 ): Promise<void> {
-  const fmt = getCompositedCardVideoExportFormat();
-  if (!fmt) {
+  if (!(await canEncodeVideoCard(row)) && !getCompositedCardVideoExportFormat()) {
     throw new Error(
       "Video export is not supported in this browser (no MP4/WebM recorder).",
     );
   }
   const blob = await getCompositedCardVideoBlob(row, opts);
   const stem = safeFileStem(row.instance.name || "card");
-  const ext = blob.type.toLowerCase().includes("mp4") ? "mp4" : fmt.ext;
+  const ext = blob.type.toLowerCase().includes("mp4") ? "mp4" : "webm";
   triggerDownload(blob, `${stem}_card.${ext}`);
 }
 

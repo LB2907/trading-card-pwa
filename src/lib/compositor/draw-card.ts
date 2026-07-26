@@ -62,6 +62,13 @@ import {
   type LuminanceProbe,
 } from "@/lib/compositor/watermark-ink";
 
+/**
+ * Art with no measurable size is skipped entirely, so anything missing from
+ * this list draws a card with an empty art window rather than failing loudly.
+ * `VideoFrame` and `OffscreenCanvas` are here because the WebCodecs export path
+ * hands decoded frames straight through; both are guarded with `typeof` because
+ * neither is defined in the node test environment.
+ */
 function intrinsicArtSize(src: CanvasImageSource): { w: number; h: number } {
   if (src instanceof HTMLVideoElement) {
     return { w: src.videoWidth, h: src.videoHeight };
@@ -73,6 +80,15 @@ function intrinsicArtSize(src: CanvasImageSource): { w: number; h: number } {
     };
   }
   if (src instanceof ImageBitmap) {
+    return { w: src.width, h: src.height };
+  }
+  if (typeof VideoFrame !== "undefined" && src instanceof VideoFrame) {
+    return { w: src.displayWidth, h: src.displayHeight };
+  }
+  if (typeof OffscreenCanvas !== "undefined" && src instanceof OffscreenCanvas) {
+    return { w: src.width, h: src.height };
+  }
+  if (typeof HTMLCanvasElement !== "undefined" && src instanceof HTMLCanvasElement) {
     return { w: src.width, h: src.height };
   }
   return { w: 0, h: 0 };
