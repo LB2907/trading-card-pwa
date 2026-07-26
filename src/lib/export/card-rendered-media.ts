@@ -275,7 +275,7 @@ async function probeSourceFps(
  * display's, and nothing composited is thrown away. Falls back to fixed-rate
  * capture where `requestFrame` is missing.
  */
-function openCanvasCapture(
+export function openCanvasCapture(
   canvas: HTMLCanvasElement,
   fps: number,
 ): { stream: MediaStream; track: CaptureTrack; manual: boolean } {

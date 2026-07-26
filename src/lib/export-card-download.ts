@@ -12,6 +12,7 @@ import {
   getCompositedCardVideoExportFormat,
   canvasSupportsWebpExport,
 } from "@/lib/export/card-rendered-media";
+import { buildCompositedGifCardVideoBlob } from "@/lib/export/card-gif-video";
 import { loadArtForCompositor } from "@/lib/media/compositor-source";
 import {
   extensionFromMediaPath,
@@ -231,6 +232,27 @@ export async function downloadCompositedCardVideo(
   const stem = safeFileStem(row.instance.name || "card");
   const ext = blob.type.toLowerCase().includes("mp4") ? "mp4" : fmt.ext;
   triggerDownload(blob, `${stem}_card.${ext}`);
+}
+
+/**
+ * Full card as video, driven from GIF art rather than a video file.
+ *
+ * X transcodes uploaded GIFs to silent MP4 anyway and allows far larger videos
+ * than GIFs, so this is the better path for that platform. Discord is the
+ * reverse — it autoplays and loops GIFs inline but shows a play button for
+ * video — so both exports stay available.
+ */
+export async function downloadCompositedGifCardVideo(
+  row: CardExportRow,
+  opts?: CardExportOptions,
+): Promise<void> {
+  const result = await buildCompositedGifCardVideoBlob(row, {
+    watermarkText: compositedWatermarkText(opts),
+    ...(opts?.onVideoProgress ? { onProgress: opts.onVideoProgress } : {}),
+    ...(opts?.signal ? { signal: opts.signal } : {}),
+  });
+  const stem = safeFileStem(row.instance.name || "card");
+  triggerDownload(result.blob, `${stem}_card.${result.ext}`);
 }
 
 export async function getOriginalMediaBlob(row: CardExportRow): Promise<Blob> {
