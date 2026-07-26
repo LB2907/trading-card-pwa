@@ -1,7 +1,11 @@
 # Lossless GIF compression with quality slider and platform badges
 
 Date: 2026-07-26
-Status: approved, implementing
+Status: implemented
+
+> Encoding architecture — why `MediaRecorder` was abandoned for WebCodecs, and
+> how to verify encoders without a display — is in
+> [`docs/export-encoding-notes.md`](../../export-encoding-notes.md).
 
 ## Problem
 
