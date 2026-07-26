@@ -20,8 +20,6 @@
  * which for a 280-frame card would be over a gigabyte of RGBA.
  */
 
-import { parseGIF, decompressFrames } from "gifuct-js";
-import type { ParsedGif, ParsedFrame } from "gifuct-js";
 import { cardCanvasSize, drawTradingCard } from "@/lib/compositor/draw-card";
 import type { LuminanceProbe } from "@/lib/compositor/watermark-ink";
 import { ensureCardFontsLoaded } from "@/lib/compositor/canvas-font";
@@ -39,6 +37,12 @@ import {
   decimateFrameDelays,
 } from "@/lib/export/gif-encode-core";
 import {
+  decodeGif,
+  fullFramesFromGif,
+  MAX_GIF_FRAMES,
+  MAX_GIF_SOURCE_FRAMES,
+} from "@/lib/export/gif-frame-source";
+import {
   createGifEncodeSession,
   type GifEncodeSession,
 } from "@/lib/export/gif-encode-session";
@@ -47,15 +51,7 @@ import {
   type GifEncodeParams,
 } from "@/lib/export/gif-quality";
 
-/** Frames actually encoded. Bounds encode time and output size. */
-export const MAX_GIF_FRAMES = 280;
-
-/**
- * Source frames decoded. Higher than `MAX_GIF_FRAMES` so the Frames knob can
- * bring a long GIF under the encode cap, but still bounded — decoding is not
- * free either.
- */
-export const MAX_GIF_SOURCE_FRAMES = MAX_GIF_FRAMES * 4;
+export { MAX_GIF_FRAMES, MAX_GIF_SOURCE_FRAMES };
 
 /** Composite one frame in this many during palette training. */
 const PALETTE_FRAME_STRIDE = 8;
@@ -92,68 +88,6 @@ export type CardGifResult = {
   /** False when the encoder had to run on the main thread. */
   offThread: boolean;
 };
-
-function rgbFillFromGifBackground(gif: ParsedGif): string {
-  const idx = gif.lsd.backgroundColorIndex ?? 0;
-  const c = gif.gct[idx] ?? [0, 0, 0];
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
-}
-
-/**
- * Walk decoded GIF frames into full logical-screen bitmaps
- * (disposal 1 = cumulative, 2 = clear before draw).
- *
- * Every frame must be composed even when only a sample is wanted, because each
- * one builds on the last — hence `wanted`, which decides whether to pay for the
- * `createImageBitmap` rather than whether to advance the accumulator.
- */
-async function* fullFramesFromGif(
-  gif: ParsedGif,
-  frames: ParsedFrame[],
-  wanted: (index: number) => boolean,
-): AsyncGenerator<{ index: number; bitmap: ImageBitmap }> {
-  const w = gif.lsd.width;
-  const h = gif.lsd.height;
-  const bg = rgbFillFromGifBackground(gif);
-
-  const acc = document.createElement("canvas");
-  acc.width = w;
-  acc.height = h;
-  const accCtx = acc.getContext("2d", { willReadFrequently: true });
-  if (!accCtx) throw new Error("Canvas unsupported");
-
-  const patchCanvas = document.createElement("canvas");
-  const patchCtx = patchCanvas.getContext("2d");
-  if (!patchCtx) throw new Error("Canvas unsupported");
-
-  accCtx.fillStyle = bg;
-  accCtx.fillRect(0, 0, w, h);
-
-  for (let i = 0; i < frames.length; i++) {
-    const frame = frames[i];
-    if (i > 0 && frames[i - 1].disposalType === 2) {
-      accCtx.fillStyle = bg;
-      accCtx.fillRect(0, 0, w, h);
-    }
-
-    const d = frame.dims;
-    patchCanvas.width = d.width;
-    patchCanvas.height = d.height;
-    const id = patchCtx.createImageData(d.width, d.height);
-    id.data.set(frame.patch);
-    patchCtx.putImageData(id, 0, 0);
-    accCtx.drawImage(patchCanvas, d.left, d.top);
-
-    if (wanted(i)) {
-      yield { index: i, bitmap: await createImageBitmap(acc) };
-    }
-  }
-}
-
-/** GIF frame delays, floored the way browsers treat them. */
-function sourceDelays(frames: ParsedFrame[]): number[] {
-  return frames.map((f) => Math.max(20, Math.min(f.delay || 100, 60_000)));
-}
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw new CardGifExportAborted();
@@ -299,19 +233,10 @@ async function encodeAnimated(
   ctx: EncodeContext,
   onProgress?: (p: CardGifProgress) => void,
 ): Promise<CardGifResult> {
-  const parsed = parseGIF(await typed.arrayBuffer());
-  const frames = decompressFrames(parsed, true);
-  if (frames.length === 0) {
-    throw new Error("This GIF contains no frames.");
-  }
-  if (frames.length > MAX_GIF_SOURCE_FRAMES) {
-    throw new Error(
-      `This GIF has ${frames.length} frames (max ${MAX_GIF_SOURCE_FRAMES}). Use video export for long clips, or trim the GIF.`,
-    );
-  }
+  const { parsed, frames, delaysMs: sourceDelays } = await decodeGif(typed);
 
   const { keptIndices, delaysMs } = decimateFrameDelays(
-    sourceDelays(frames),
+    sourceDelays,
     ctx.params.frameStep,
   );
   if (keptIndices.length > MAX_GIF_FRAMES) {

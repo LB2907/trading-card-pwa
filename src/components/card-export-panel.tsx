@@ -8,6 +8,7 @@ import type {
   CardVideoProgress,
 } from "@/lib/export-card-download";
 import {
+  downloadCompositedGifCardVideo,
   downloadCompositedCardJpeg,
   downloadCompositedCardPng,
   downloadCompositedCardVideo,
@@ -21,6 +22,7 @@ import {
   CardVideoExportAborted,
   getCompositedCardVideoExportFormat,
 } from "@/lib/export/card-rendered-media";
+import { canExportGifCardVideo } from "@/lib/export/card-gif-video";
 import { cardMediaMode } from "@/lib/media/card-media-mode";
 import {
   DEFAULT_EXPORT_RESOLUTION,
@@ -102,6 +104,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
   // paint cannot disagree with the server-rendered markup.
   const [watermarkBase, setWatermarkBase] = useState("");
   const [gifBusy, setGifBusy] = useState(false);
+  const [gifVideoOk, setGifVideoOk] = useState(false);
   const [videoProgress, setVideoProgress] = useState<CardVideoProgress | null>(
     null,
   );
@@ -120,7 +123,8 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
   useEffect(() => {
     setWebpOk(canvasSupportsWebpExport());
     setVideoFmt(getCompositedCardVideoExportFormat());
-  }, []);
+    setGifVideoOk(canExportGifCardVideo(row));
+  }, [row]);
 
   useEffect(() => {
     if (!open) return;
@@ -149,7 +153,10 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
     }
   }
 
-  async function runVideo() {
+  async function runVideo(
+    download: (opts: CardExportOptions) => Promise<void> = (o) =>
+      downloadCompositedCardVideo(row, o),
+  ) {
     primeExportFolderWriteFromUserGesture();
     const controller = new AbortController();
     videoAbortRef.current = controller;
@@ -157,7 +164,7 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
     setNote(null);
     setVideoProgress({ fraction: 0, elapsedMs: 0, totalMs: null });
     try {
-      await downloadCompositedCardVideo(row, {
+      await download({
         ...compositedOpts,
         onVideoProgress: setVideoProgress,
         signal: controller.signal,
@@ -334,6 +341,30 @@ export function CardExportPanel({ row }: { row: CardExportRow }) {
                   disabled={busy}
                   onBusyChange={setGifBusy}
                 />
+                {kind === "gif" && gifVideoOk ? (
+                  <div className="space-y-1.5 rounded-lg border border-border/80 bg-muted/15 p-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full"
+                      disabled={anyBusy}
+                      onClick={() =>
+                        void runVideo((o) =>
+                          downloadCompositedGifCardVideo(row, o),
+                        )
+                      }
+                    >
+                      Record as video — best for X
+                    </Button>
+                    <p className="text-[11px] leading-snug text-muted-foreground">
+                      X converts uploaded GIFs to silent video anyway, and allows
+                      far larger videos than GIFs — so this looks better there
+                      and is easier to fit. Discord is the opposite: it autoplays
+                      and loops GIFs inline but shows a play button for video, so
+                      send the GIF there.
+                    </p>
+                  </div>
+                ) : null}
                 {artIsVideo && videoFmt ? (
                   <Button
                     type="button"
