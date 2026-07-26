@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { applyPalette } from "gifenc";
 import { parseGIF, decompressFrames } from "gifuct-js";
 import {
   colorTableBits,
   createGifStream,
+  createPaletteMapper,
   createPaletteTrainer,
   decimateFrameDelays,
 } from "@/lib/export/gif-encode-core";
@@ -102,7 +102,7 @@ function palettized(
   rgba: Uint8ClampedArray,
   palette: number[][],
 ): Uint8ClampedArray {
-  const index = applyPalette(rgba, palette);
+  const index = createPaletteMapper(palette)(rgba);
   const out = new Uint8ClampedArray(rgba.length);
   for (let i = 0; i < index.length; i++) {
     const c = palette[index[i]];
@@ -194,6 +194,83 @@ describe("createGifStream", () => {
     const palette = buildPalette(frames, 255);
     const stream = createGifStream({ width: W, height: H, palette });
     expect(() => stream.finish()).toThrow(/no frames/);
+  });
+});
+
+describe("createPaletteMapper", () => {
+  // Colors chosen to share an rgb565 bucket: (40,38,46) and (41,39,47) both
+  // bucket to r=5, g=9, b=5. gifenc's applyPalette resolved such a bucket using
+  // whichever color reached it first in scan order, so static pixels changed
+  // index when unrelated content changed — the flicker this guards against.
+  const STATIC_COLOR = [40, 38, 46] as const;
+  const COLLIDING = [41, 39, 47] as const;
+  const palette = [
+    [...STATIC_COLOR],
+    [...COLLIDING],
+    [200, 10, 10],
+    [255, 255, 255],
+  ];
+
+  /** Top half varies, bottom half is always STATIC_COLOR. */
+  function twoTone(topColor: readonly number[]): Uint8ClampedArray {
+    const w = 8;
+    const h = 8;
+    const rgba = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      const c = y < h / 2 ? topColor : STATIC_COLOR;
+      for (let x = 0; x < w; x++) {
+        const o = (y * w + x) * 4;
+        rgba[o] = c[0];
+        rgba[o + 1] = c[1];
+        rgba[o + 2] = c[2];
+        rgba[o + 3] = 255;
+      }
+    }
+    return rgba;
+  }
+
+  it("gives a static region the same indices however the rest of the frame changes", () => {
+    const map = createPaletteMapper(palette);
+    const a = map(twoTone([200, 10, 10]));
+    // The colliding top half is what used to poison the shared bucket.
+    const b = map(twoTone(COLLIDING));
+
+    const staticHalf = (idx: Uint8Array) => Array.from(idx.slice(32));
+    expect(staticHalf(b)).toEqual(staticHalf(a));
+  });
+
+  it("resolves a color the same way regardless of scan position", () => {
+    const map = createPaletteMapper(palette);
+    const first = map(twoTone(COLLIDING));
+    // A fresh mapper seeing the colors in the other order must agree.
+    const second = createPaletteMapper(palette)(twoTone([255, 255, 255]));
+    expect(Array.from(first.slice(32))).toEqual(Array.from(second.slice(32)));
+  });
+
+  it("is a pure function of the color, not of the mapper instance", () => {
+    const frame = twoTone([200, 10, 10]);
+    expect(Array.from(createPaletteMapper(palette)(frame))).toEqual(
+      Array.from(createPaletteMapper(palette)(frame)),
+    );
+  });
+
+  it("maps each color to its own palette entry when one matches exactly", () => {
+    const map = createPaletteMapper(palette);
+    const idx = map(twoTone([200, 10, 10]));
+    expect(idx[0]).toBe(2); // top half -> [200,10,10]
+    expect(idx[32]).toBe(0); // bottom half -> STATIC_COLOR
+  });
+
+  it("never emits an index outside the palette", () => {
+    const map = createPaletteMapper(palette);
+    const rgba = new Uint8ClampedArray(256 * 4);
+    for (let i = 0; i < 256; i++) {
+      rgba[i * 4] = i;
+      rgba[i * 4 + 1] = 255 - i;
+      rgba[i * 4 + 2] = (i * 7) % 256;
+      rgba[i * 4 + 3] = 255;
+    }
+    for (const v of map(rgba)) expect(v).toBeLessThan(palette.length);
   });
 });
 
