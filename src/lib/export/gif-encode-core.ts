@@ -25,7 +25,7 @@
  * most of that win anyway.
  */
 
-import { GIFEncoder, applyPalette, quantize } from "gifenc";
+import { GIFEncoder, quantize } from "gifenc";
 
 /** RGB triples. Index `length` of this array is reserved for transparency. */
 export type GifPalette = number[][];
@@ -127,6 +127,83 @@ export function quantizeSamples(
   return quantize(samples, cap);
 }
 
+/** rgb565 bucket for a color. Matches the bucketing gifenc already used. */
+function rgb565Key(r: number, g: number, b: number): number {
+  return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+}
+
+/**
+ * The canonical color of a bucket, expanded back to 8 bits per channel. High
+ * bits are replicated into the low ones so a full bucket maps to 255, not 248.
+ */
+function keyToRgb(key: number): [number, number, number] {
+  const r = (key >> 11) & 0x1f;
+  const g = (key >> 5) & 0x3f;
+  const b = key & 0x1f;
+  return [(r << 3) | (r >> 2), (g << 2) | (g >> 4), (b << 3) | (b >> 2)];
+}
+
+function nearestIndexForKey(key: number, palette: GifPalette): number {
+  const [r, g, b] = keyToRgb(key);
+  let best = 0;
+  let bestDistance = Infinity;
+  for (let i = 0; i < palette.length; i++) {
+    const dr = r - palette[i][0];
+    const dg = g - palette[i][1];
+    const db = b - palette[i][2];
+    const d = dr * dr + dg * dg + db * db;
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * Maps RGBA to palette indices such that the same color always yields the same
+ * index — across pixels, across frames, whatever else is in the image.
+ *
+ * This replaces gifenc's `applyPalette`, which is *not* stable in that way and
+ * was the cause of a visible flicker. Its cache is keyed on the rgb565 bucket
+ * but stores the nearest match for the **exact color of whichever pixel reached
+ * that bucket first in scan order**. Several distinct colors share a bucket, so
+ * when the art changed, a different color seeded the bucket and every later
+ * pixel using that key — including completely static card chrome — was handed a
+ * different palette index. Differencing then had nothing to eliminate and the
+ * card border, name and text crawled between frames.
+ *
+ * Measured on a real card: with `applyPalette`, pixels whose RGB was identical
+ * between two frames still changed index right across the card
+ * (x[3..836] y[28..1172] of an 840×1176 export). With this mapper the changes
+ * collapse to exactly the art window (x[49..790] y[28..769]) — the region whose
+ * pixels genuinely differ.
+ *
+ * The index is derived from the bucket alone, so it is a pure function of the
+ * key and the cache is plain memoization. Buckets are filled lazily, keeping a
+ * single-frame still as cheap as it was.
+ */
+export function createPaletteMapper(
+  palette: GifPalette,
+): (rgba: Uint8ClampedArray) => Uint8Array {
+  const cache = new Int16Array(65536).fill(-1);
+  return function mapFrame(rgba: Uint8ClampedArray): Uint8Array {
+    const pixels = rgba.length >> 2;
+    const out = new Uint8Array(pixels);
+    for (let p = 0; p < pixels; p++) {
+      const o = p << 2;
+      const key = rgb565Key(rgba[o], rgba[o + 1], rgba[o + 2]);
+      let idx = cache[key];
+      if (idx < 0) {
+        idx = nearestIndexForKey(key, palette);
+        cache[key] = idx;
+      }
+      out[p] = idx;
+    }
+    return out;
+  };
+}
+
 export type GifStream = {
   addFrame(rgba: Uint8ClampedArray, delayMs: number): void;
   finish(): Uint8Array;
@@ -167,13 +244,16 @@ export function createGifStream(options: GifStreamOptions): GifStream {
   }
 
   const transparentIndex = palette.length;
-  // One sentinel entry past the real colors. `applyPalette` only ever sees the
+  // One sentinel entry past the real colors. The mapper only ever sees the
   // opaque palette, so it can never emit this index by accident — we write it
   // ourselves, and only for pixels that did not change.
   const tablePalette: GifPalette = [...palette, [0, 0, 0]];
   const colorDepth = colorTableBits(tablePalette.length);
 
   const gif = GIFEncoder();
+  // One mapper for the whole animation: a colour must resolve to the same index
+  // in every frame, or static pixels stop differencing away and visibly crawl.
+  const mapFrame = createPaletteMapper(palette);
   let previous: Uint8Array | null = null;
   let frameCount = 0;
 
@@ -190,7 +270,7 @@ export function createGifStream(options: GifStreamOptions): GifStream {
       // GIF stores delay in hundredths of a second; anything under 20ms is
       // clamped by browsers to ~100ms anyway, so keep the existing floor.
       const delay = Math.max(20, Math.min(Math.round(delayMs) || 100, 60_000));
-      const index = applyPalette(rgba, palette);
+      const index = mapFrame(rgba);
 
       if (!previous) {
         gif.writeFrame(index, width, height, {

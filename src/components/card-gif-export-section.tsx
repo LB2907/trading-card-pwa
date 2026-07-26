@@ -13,13 +13,15 @@ import {
 import {
   GIF_KNOB_LABELS,
   GIF_QUALITY_KNOBS,
-  GIF_QUALITY_LOSSLESS,
   GIF_QUALITY_MAX,
   GIF_QUALITY_MIN,
+  LOSSLESS_QUALITY_LEVELS,
+  describeKnobLevel,
   encodeParamsKey,
-  isLosslessParams,
+  isLosslessLevels,
   resolveEncodeParams,
   type GifQualityKnob,
+  type GifQualityLevels,
 } from "@/lib/export/gif-quality";
 import {
   evaluateGifPlatformFits,
@@ -109,8 +111,9 @@ export function CardGifExportSection({
   animated: boolean;
   onBusyChange?: (busy: boolean) => void;
 }) {
-  const [level, setLevel] = useState(GIF_QUALITY_LOSSLESS);
-  const [knobs, setKnobs] = useState<GifQualityKnob[]>([]);
+  const [levels, setLevels] = useState<GifQualityLevels>(
+    LOSSLESS_QUALITY_LEVELS,
+  );
   const [result, setResult] = useState<CardGifResult | null>(null);
   const [progress, setProgress] = useState<CardGifProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +125,7 @@ export function CardGifExportSection({
   // Guards against a slow encode resolving after a newer one and overwriting it.
   const runIdRef = useRef(0);
 
-  const params = resolveEncodeParams({ level, knobs });
+  const params = resolveEncodeParams(levels);
   const cacheKey = encodeParamsKey(params, watermarkText);
   const busy = progress !== null;
 
@@ -153,7 +156,7 @@ export function CardGifExportSection({
       try {
         const next = await buildCardGif(row, {
           watermarkText,
-          params: resolveEncodeParams({ level, knobs }),
+          params: resolveEncodeParams(levels),
           signal: controller.signal,
           onProgress: (p) => {
             if (runIdRef.current === runId) setProgress(p);
@@ -174,7 +177,7 @@ export function CardGifExportSection({
         }
       }
     },
-    [row, watermarkText, level, knobs],
+    [row, watermarkText, levels],
   );
 
   // Re-encode when the settings change, but only once the user has asked for a
@@ -204,13 +207,11 @@ export function CardGifExportSection({
     };
   }, []);
 
-  const toggleKnob = (knob: GifQualityKnob) => {
-    setKnobs((prev) =>
-      prev.includes(knob) ? prev.filter((k) => k !== knob) : [...prev, knob],
-    );
+  const setKnobLevel = (knob: GifQualityKnob, value: number) => {
+    setLevels((prev) => ({ ...prev, [knob]: value }));
   };
 
-  const lossless = isLosslessParams(params);
+  const lossless = isLosslessLevels(levels);
   const fits = result ? evaluateGifPlatformFits(result.bytes) : null;
 
   if (!started) {
@@ -245,7 +246,7 @@ export function CardGifExportSection({
         <p className="text-[11px] leading-snug text-muted-foreground">
           {result.width}×{result.height}
           {result.frames > 1 ? ` · ${result.frames} frames` : " · still"}
-          {lossless ? " · lossless" : ` · quality ${level}/${GIF_QUALITY_MAX}`}
+          {lossless ? " · lossless" : ` · ${params.maxColors} colors`}
         </p>
       ) : null}
 
@@ -257,68 +258,69 @@ export function CardGifExportSection({
         </div>
       ) : null}
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <p className="text-[11px] font-medium text-muted-foreground">
-            Allowed to sacrifice
+            Quality
           </p>
-          {knobs.length === 0 ? (
+          {lossless ? (
             <span className="text-[10px] uppercase tracking-wider text-emerald-400/80">
               lossless
             </span>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => setLevels(LOSSLESS_QUALITY_LEVELS)}
+              className="text-[10px] uppercase tracking-wider text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              reset to lossless
+            </button>
+          )}
         </div>
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quality knobs">
-          {GIF_QUALITY_KNOBS.map((knob) => {
-            const active = knobs.includes(knob);
-            return (
-              <button
-                key={knob}
-                type="button"
-                aria-pressed={active}
-                disabled={disabled}
-                title={GIF_KNOB_LABELS[knob].hint}
-                onClick={() => toggleKnob(knob)}
-                className={cn(
-                  "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors disabled:opacity-50",
-                  active
-                    ? "border-[var(--tc-accent)] bg-[color-mix(in_srgb,var(--tc-accent)_16%,transparent)] text-foreground"
-                    : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40",
-                )}
-              >
-                {GIF_KNOB_LABELS[knob].label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between gap-3">
-          <label
-            htmlFor="gif-quality-slider"
-            className="text-[11px] font-medium text-muted-foreground"
-          >
-            Quality
-          </label>
-          <span className="text-[11px] tabular-nums text-muted-foreground">
-            {level === GIF_QUALITY_MAX ? "10 · max" : `${level} / 10`}
-          </span>
-        </div>
-        <Slider
-          id="gif-quality-slider"
-          min={GIF_QUALITY_MIN}
-          max={GIF_QUALITY_MAX}
-          step={1}
-          value={[level]}
-          disabled={disabled || knobs.length === 0}
-          onValueChange={([v]) => setLevel(v)}
-          aria-label="GIF quality"
-        />
+        {GIF_QUALITY_KNOBS.map((knob) => {
+          const level = levels[knob];
+          const atMax = level === GIF_QUALITY_MAX;
+          return (
+            <div key={knob} className="space-y-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <label
+                  htmlFor={`gif-quality-${knob}`}
+                  className="text-[11px] font-medium"
+                  title={GIF_KNOB_LABELS[knob].hint}
+                >
+                  {GIF_KNOB_LABELS[knob].label}
+                </label>
+                <span
+                  className={cn(
+                    "text-[10px] tabular-nums",
+                    atMax ? "text-muted-foreground" : "text-[var(--tc-accent)]",
+                  )}
+                >
+                  {describeKnobLevel(knob, level)}
+                </span>
+              </div>
+              <Slider
+                id={`gif-quality-${knob}`}
+                min={GIF_QUALITY_MIN}
+                max={GIF_QUALITY_MAX}
+                step={1}
+                value={[level]}
+                disabled={disabled}
+                onValueChange={([v]) => setKnobLevel(knob, v)}
+                aria-label={`${GIF_KNOB_LABELS[knob].label} quality`}
+                aria-valuetext={describeKnobLevel(knob, level)}
+              />
+            </div>
+          );
+        })}
+
         <p className="text-[10px] leading-snug text-muted-foreground">
-          {knobs.length === 0
-            ? "Pick something to sacrifice above before the slider can shrink the file."
-            : "10 keeps every pixel. Lower spends only what you allowed."}
+          Each slider is independent and lossless at its right-hand end. Colors
+          and Frames leave the card frame and text completely still — only the
+          art window changes between frames. Size rescales the whole card, text
+          included.
         </p>
       </div>
 

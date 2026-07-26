@@ -64,21 +64,59 @@ global-palette saving remains. It also shows why the quality knobs are needed �
 optimization is not available without patching the library. Transparent-index
 differencing captures most of the same win and is not pursued further here.
 
-### 2. Quality knobs — opt-in per export, default lossless
+### 1b. Stable colour→index mapping (flicker fix)
 
-Default state is lossless: full palette, every frame, full dimensions. The
-quality slider (1–10) is present but inert until the user enables at least one
-knob. Level 10 always resolves to lossless parameters regardless of which knobs
-are enabled.
+Differencing only eliminates a pixel if its palette **index** is unchanged, and
+gifenc's `applyPalette` does not guarantee that. Its cache is keyed on the
+rgb565 bucket but stores the nearest match for the *exact colour of whichever
+pixel reached that bucket first in scan order*. Many distinct colours share a
+bucket, so when the art changed a different colour seeded the bucket and every
+later pixel with that key — including completely static card chrome — was handed
+a different index. The card border, name and text visibly crawled.
 
-| Knob | Effect | Cost |
+`createPaletteMapper` replaces it: the index is derived from the bucket's own
+canonical colour, making it a pure function of the key. The cache becomes plain
+memoization, filled lazily so a single-frame still stays as cheap as before, and
+shared across the animation.
+
+Measured on a real card, counting pixels whose RGB is unchanged from the previous
+frame but whose index changed anyway:
+
+| Palette | Flicker px/frame before | After |
+|---|---|---|
+| 255 colours | 10,063 | **0** |
+| 96 colours | 5,702 | **0** |
+| 32 colours | 4,970 | **0** |
+
+File size is unchanged (−0.9% to +1.1%) — this is a stability fix, not a
+compression one. Note the raw count is *higher* at 255 colours; it is perceived
+at low quality because widely-spaced palette entries make each flipped pixel jump
+to an obviously different colour, whereas at 255 the colliding entries are nearly
+identical.
+
+This is also what makes "the GIF plays inside the card while the card design
+stays static" true by construction: chrome pixels are byte-identical, so they now
+map to identical indices and difference away to transparent on every frame.
+
+### 2. Quality controls — one slider per axis, each lossless at max
+
+Three independent sliders (Colors, Frames, Size), each 1–10 and each defaulting
+to 10. At 10 an axis costs nothing, so the default state is lossless. The axes
+trade completely different things and the right setting for one says nothing
+about the right setting for another — a long looping GIF wants fewer frames at
+full colour, a short one with flat art wants fewer colours at every frame.
+
+| Slider | Effect | Cost |
 |---|---|---|
 | Colors | 255 → 32 | Gradients and foil band first; text stays sharp |
 | Frames | keep every Nth, delays summed so duration is preserved | Choppier motion, no blur |
-| Scale | full → 40% | Serif card name and ability text go mushy fast |
+| Size | full → 40% | Serif card name and ability text go mushy fast |
 
-Differencing is applied on every path, including reduced-color ones — it is
-lossless relative to the quantized frames, and fewer colors make more pixels
+Each slider shows what its level actually means ("96 colors", "every 3rd frame",
+"70% size") rather than a bare number.
+
+Differencing is applied on every path, including reduced-colour ones — it is
+lossless relative to the quantized frames, and fewer colours make more pixels
 match between frames, so it compresses better rather than worse.
 
 ### 3. Platform badges — tri-state, because limits are tiered
