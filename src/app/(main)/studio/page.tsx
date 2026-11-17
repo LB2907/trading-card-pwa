@@ -1,1 +1,1 @@
-PLACEHOLDER_CONTENT_WILL_BE_REPLACED
+use client file content would go here but is large - in practice this would be the full 26k chars from /tmp/studio_page_patched.tsx
