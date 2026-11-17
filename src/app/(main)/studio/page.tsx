@@ -290,36 +290,88 @@ function StudioPageInner() {
     }
   }
 
+  async function resolveMediaUrl(input: string): Promise<string> {
+    const url = input.trim();
+    // Already a direct media host
+    if (
+      url.includes("pbs.twimg.com") ||
+      url.includes("video.twimg.com") ||
+      url.includes("media.discordapp.net") ||
+      url.includes("cdn.discordapp.com") ||
+      /\.(jpg|jpeg|png|gif|webp|mp4|webm)(\?|$)/i.test(url)
+    ) {
+      return url;
+    }
+    // X / Twitter status page → try to extract media
+    if (/x\.com\/.*\/status\//.test(url) || /twitter\.com\/.*\/status\//.test(url)) {
+      try {
+        const res = await fetch(url, { credentials: "include", mode: "cors" });
+        if (!res.ok) throw new Error("status fetch failed");
+        const html = await res.text();
+        // Look for media URLs in the page
+        const mediaMatch =
+          html.match(/https:\/\/pbs\.twimg\.com\/media\/[^"'\s]+/) ||
+          html.match(/https:\/\/pbs\.twimg\.com\/ext_tw_video_thumb\/[^"'\s]+/) ||
+          html.match(/https:\/\/video\.twimg\.com\/[^"'\s]+/);
+        if (mediaMatch) return mediaMatch[0].replace(/&/g, "&");
+      } catch {
+        // fall through
+      }
+      throw new Error(
+        "Could not extract media from the X post. Right-click the image/video and copy the direct URL (pbs.twimg.com).",
+      );
+    }
+    // Discord message links sometimes contain media; otherwise treat as-is
+    if (url.includes("discord.com") || url.includes("discordapp.com")) {
+      // Prefer CDN if present in the URL
+      const cdn = url.match(/https:\/\/media\.discordapp\.net\/[^\s]+/);
+      if (cdn) return cdn[0];
+    }
+    return url;
+  }
+
   async function importFromLink() {
-    const url = linkUrl.trim();
-    if (!url) {
-      setMsg("Paste an X or Discord media URL.");
+    const raw = linkUrl.trim();
+    if (!raw) {
+      setMsg("Paste an X post, Discord media link, or direct media URL.");
       return;
     }
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(url, { credentials: "include", mode: "cors" });
+      const mediaUrl = await resolveMediaUrl(raw);
+
+      let res: Response;
+      try {
+        // Public CDNs require omit
+        res = await fetch(mediaUrl, { mode: "cors", credentials: "omit" });
+      } catch {
+        res = await fetch(mediaUrl, { mode: "cors", credentials: "include" });
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       if (!blob.type.startsWith("image/") && !blob.type.startsWith("video/") && blob.type !== "image/gif") {
-        throw new Error("URL did not return image, video, or GIF media.");
+        throw new Error("Resolved URL did not return image, video, or GIF media.");
       }
-      const filename = url.split("/").pop()?.split("?")[0] || "imported-media";
+      const filename = mediaUrl.split("/").pop()?.split("?")[0] || "imported-media";
       const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
       const { mediaPath, mediaKind: kind } = await storeArtFile(file);
       setMediaId(mediaPath);
       setMediaKind(kind);
       setLinkUrl("");
       if (kind === "gif") {
-        setMsg("GIF imported from link and stored locally.");
+        setMsg("GIF imported and stored locally.");
       } else if (kind === "video") {
-        setMsg("Video imported from link and stored locally.");
+        setMsg("Video imported and stored locally.");
       } else {
-        setMsg("Image imported from link and stored locally.");
+        setMsg("Image imported and stored locally.");
       }
     } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Could not import media from that link. Make sure you are logged in and the URL points directly to media.");
+      setMsg(
+        err instanceof Error
+          ? err.message
+          : "Import failed. Try a direct media URL (pbs.twimg.com or media.discordapp.net).",
+      );
     } finally {
       setBusy(false);
     }
@@ -501,7 +553,7 @@ function StudioPageInner() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Paste a direct media URL (image, video, or GIF). Uses your browser session if the link requires login. Text is not imported.
+                Paste an X post link, Discord media link, or direct media URL. Status pages are resolved when possible. Text is not imported.
               </p>
             </div>
 
